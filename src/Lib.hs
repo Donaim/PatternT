@@ -6,6 +6,7 @@ import Data.Maybe
 import Data.Either
 import Debug.Trace
 import Data.Char
+import Data.List.Split
 
 traceS :: (Show a) => String -> a -> a
 traceS text x = trace (text ++ show x) x
@@ -151,3 +152,26 @@ matchGroups ps ts = loop emptyDict ps ts
 			Just retDict ->
 				let newDict = bindingConcat dict retDict
 				in loop newDict ps ts
+
+
+data ParseMatchError
+	= Unknown
+	| SplitFailed [String]
+
+parseMatch :: String -> Either ParseMatchError SimplifyPattern
+parseMatch text = case sp of
+		[matchPart, replacePart] -> do
+			match <- parseMatchPart matchPart
+			replace <- parseReplacePart replacePart
+			return (SimplifyPatternRule match replace)
+
+		other -> Left (SplitFailed other)
+	where
+	sp = splitOn " -> " text
+
+parseMatchPart :: String -> Either ParseMatchError PatternMatchPart
+parseMatchPart text = undefined
+
+parseReplacePart :: String -> Either ParseMatchError PatternReplacePart
+parseReplacePart text = undefined
+
