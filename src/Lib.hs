@@ -94,6 +94,14 @@ data PatternReplacePart
 data SimplifyPattern
 	= SimplifyPatternRule PatternMatchPart PatternReplacePart
 
+type BindingDict = [(String, Tree)]
+
+bindingGet :: BindingDict -> String -> Maybe Tree
+bindingGet dict key =
+	case find ((== key) . fst) dict of
+		Nothing -> Nothing
+		Just (k, v) -> Just v
+
 matchAndReplace :: SimplifyPattern -> Tree -> Maybe Tree
 matchAndReplace (SimplifyPatternRule match replace) t = case t of
 	(_) -> undefined
