@@ -210,23 +210,18 @@ maybeNext a f1 f2 =
 			Nothing -> Just newa
 			Just newest -> Just newest
 
+-- | x * W + y * W -> (a + b) * W
 reduceAddSymbols :: Term -> Maybe Term
-reduceAddSymbols t = case t of
-	TAdd2 left right -> case left of
-		(TMult (TNum c1) cleft) -> case right of
-			(TMult (TNum c2) cright) ->
-				if cleft == cright
-				then Just (TMult (TNum (c1 + c2)) cleft)
-				else Nothing
-
-			(TAdd2 (TMult (TNum c2) cright) y) ->
-				if cleft == cright
-				then Just (TAdd2 (TMult (TNum (c1 + c2)) cleft) y)
-				else Nothing
-
-			(_) -> Nothing
-		(_) -> Nothing
-	(_) -> Nothing
+reduceAddSymbols (TAdd2 (TMult (TNum x) cx) (TMult (TNum y) cy)) =
+	if cx == cy
+	then Just (TMult (TNum (x + y)) cx)
+	else Nothing
+-- x * W + (y * W + Z) -> (x + y) * W + Z
+reduceAddSymbols (TAdd2 (TMult (TNum x) cx) (TAdd2 (TMult (TNum y) cy) z)) =
+	if cx == cy
+	then Just (TAdd2 (TMult (TNum (x + y)) cx) z)
+	else Nothing
+reduceAddSymbols (_) = Nothing
 
 reduceAddNums :: Term -> Maybe Term
 reduceAddNums (TAdd2 (TNum x) (TNum y)) = Just (TNum (x + y))
