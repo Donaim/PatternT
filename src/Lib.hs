@@ -210,8 +210,8 @@ maybeNext a f1 f2 =
 			Nothing -> Just newa
 			Just newest -> Just newest
 
--- | x * W + y * W -> (a + b) * W
 reduceAddSymbols :: Term -> Maybe Term
+-- x * W + y * W -> (a + b) * W
 reduceAddSymbols (TAdd (TMul (TNum x) cx) (TMul (TNum y) cy)) =
 	if cx == cy
 	then Just (TMul (TNum (x + y)) cx)
@@ -224,16 +224,21 @@ reduceAddSymbols (TAdd (TMul (TNum x) cx) (TAdd (TMul (TNum y) cy) z)) =
 reduceAddSymbols (_) = Nothing
 
 reduceAddNums :: Term -> Maybe Term
+-- x + y -> x + y (reduced)
 reduceAddNums (TAdd (TNum x) (TNum y)) = Just (TNum (x + y))
+-- a + (b + W) -> (a + b) + W
 reduceAddNums (TAdd (TNum a) (TAdd (TNum b) w)) = Just (TAdd (TNum (a + b)) w)
 reduceAddNums (_) = Nothing
 
 reduceMult :: Term -> Maybe Term
+-- x * y -> x * y (reduced)
 reduceMult (TMul (TNum x) (TNum y)) = Just (TNum (x * y))
+-- a * (b * W) -> (a * b) * W
 reduceMult (TMul (TNum a) (TMul (TNum b) w)) = Just (TMul (TNum (a * b)) w)
 reduceMult (_) = Nothing
 
 reduceDistributive :: Term -> Maybe Term
+-- x * (a + b) -> x * a + x * b
 reduceDistributive (TMul x (TAdd a b)) = Just (TAdd (TMul x a) (TMul x b))
 reduceDistributive (_) = Nothing
 
