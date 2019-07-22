@@ -114,6 +114,22 @@ bindingAdd dict key value = (key, value) : dict
 bindingConcat :: BindingDict -> BindingDict -> BindingDict
 bindingConcat a b = a ++ b
 
+matchAndReplace :: SimplifyPattern -> Tree -> Maybe Tree
+matchAndReplace pattern t = case pattern of
+	(SimplifyPatternRule match replace) ->
+		case matchAndDoSomething match t of
+			Nothing -> Nothing
+			Just dict -> Just (replaceWithDict dict replace)
+
+replaceWithDict :: BindingDict -> PatternReplacePart -> Tree
+replaceWithDict dict replace = case replace of
+	(RVar token) ->
+		case bindingGet dict token of
+			Just t -> t
+			Nothing -> (Leaf token)
+	(RGroup x xs) ->
+		(Branch (replaceWithDict dict x) (map (replaceWithDict dict) xs))
+
 matchAndDoSomething :: PatternMatchPart -> Tree -> Maybe BindingDict
 matchAndDoSomething match t = loop emptyDict match t
 	where
