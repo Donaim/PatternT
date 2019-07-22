@@ -126,15 +126,17 @@ matchAndDoSomething match t = loop emptyDict match t
 					else Nothing -- Names don't match
 				(Branch {}) ->
 					Nothing -- NameMatch cannot match a tree!
+
+		(MatchGroup p []) ->
+			matchAndDoSomething p t
 		(MatchGroup p ps) ->
 			case t of
+				(Branch x []) ->
+					matchAndDoSomething match x
 				(Branch x xs) ->
 					matchGroups (p : ps) (x : xs) >>= (return . bindingConcat dict)
 				(Leaf x) ->
-					case ps of
-						-- IMPORTANT: Singleton list could be equal to leaf! Implicit rule: ((a)) -> (a) -> a
-						[] -> matchAndDoSomething p t >>= (return . bindingConcat dict)
-						more -> Nothing
+					Nothing
 
 matchGroups :: [PatternMatchPart] -> [Tree] -> Maybe BindingDict
 matchGroups ps ts = loop emptyDict ps ts
