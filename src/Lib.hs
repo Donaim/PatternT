@@ -102,10 +102,15 @@ bindingGet dict key =
 		Nothing -> Nothing
 		Just (k, v) -> Just v
 
-matchAndReplace :: SimplifyPattern -> Tree -> Maybe Tree
-matchAndReplace (SimplifyPatternRule match replace) t = case t of
-	(_) -> undefined
+bindingAdd :: BindingDict -> String -> Tree -> BindingDict
+bindingAdd dict key value = (key, value) : dict
 
+bindingConcat :: BindingDict -> BindingDict -> BindingDict
+bindingConcat a b = a ++ b
+
+matchAndDoSomething :: PatternMatchPart -> Tree -> BindingDict -> Maybe BindingDict
+matchAndDoSomething match t dict = case t of
+	(_) -> undefined
 
 -- make1 :: [Expr] -> Op -> [Expr] -> Either ParseError Tree
 -- make1 prev op next =
