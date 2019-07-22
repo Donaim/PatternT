@@ -157,6 +157,8 @@ matchGroups ps ts = loop emptyDict ps ts
 data ParseMatchError
 	= Unknown
 	| SplitFailed [String]
+	| MakeTreeError ParseError
+	deriving (Eq, Show, Read)
 
 parseMatch :: String -> Either ParseMatchError SimplifyPattern
 parseMatch text = case sp of
@@ -170,8 +172,36 @@ parseMatch text = case sp of
 	sp = splitOn " -> " text
 
 parseMatchPart :: String -> Either ParseMatchError PatternMatchPart
-parseMatchPart text = undefined
+parseMatchPart text = case tree of
+		Right t -> Right (treeToMatchPattern t)
+		Left e -> Left (MakeTreeError e)
+	where
+	tokens = tokenize text
+	tree = makeTree tokens
+
+treeToMatchPattern :: Tree -> PatternMatchPart
+treeToMatchPattern t = case t of
+	(Leaf s) ->
+		case s of
+			('[' : x : xs) ->
+				if last xs == ']'
+				then NameMatch (x : (init xs))
+				else Variable s
+			(_) -> Variable s
+	(Branch x xs) ->
+		(MatchGroup (treeToMatchPattern x) (map treeToMatchPattern xs))
 
 parseReplacePart :: String -> Either ParseMatchError PatternReplacePart
-parseReplacePart text = undefined
+parseReplacePart text = case tree of
+		Right t -> Right (treeToReplacePattern t)
+		Left e -> Left (MakeTreeError e)
+	where
+	tokens = tokenize text
+	tree = makeTree tokens
 
+treeToReplacePattern :: Tree -> PatternReplacePart
+treeToReplacePattern t = case t of
+	(Leaf s) ->
+		(RVar s)
+	(Branch x xs) ->
+		(RGroup (treeToReplacePattern x) (map treeToReplacePattern xs))
