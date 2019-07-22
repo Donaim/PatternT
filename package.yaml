@@ -25,6 +25,15 @@ dependencies:
 library:
   source-dirs: src
 
+ghc-options:
+- -Wno-name-shadowing
+- -Wno-tabs
+- -Wincomplete-patterns
+- -Wno-unused-imports
+- -Wno-unused-local-binds
+- -Wno-type-defaults
+- -O3
+
 executables:
   hacalc-exe:
     main:                Main.hs
