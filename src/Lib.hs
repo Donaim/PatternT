@@ -348,6 +348,7 @@ showNoZeroes x = striped
 		r = reverse s
 		striped = reverse $ dropWhile (\c -> c == '0' || c == '.') r
 
+-- TODO: figure out when brackets ARE required. So far it seems like they never are
 stringifyTerm :: Term -> String
 stringifyTerm t = case t of
 	TNum x -> showNoZeroes x
