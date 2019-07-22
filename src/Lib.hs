@@ -245,6 +245,7 @@ reduceDistributive (_) = Nothing
 reduceConstants :: Term -> Maybe Term
 reduceConstants (TMul (TNum 0) x) = Just (TNum 0)
 reduceConstants (TMul (TNum 1) x) = Just x
+reduceConstants (TAdd (TNum 0) x) = Just x
 reduceConstants (_) = Nothing
 
 applyTerm :: (Term -> Maybe Term) -> Term -> (Term, Int)
