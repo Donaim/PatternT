@@ -131,46 +131,42 @@ replaceWithDict dict replace = case replace of
 		(Branch (replaceWithDict dict x) (map (replaceWithDict dict) xs))
 
 matchAndDoSomething :: PatternMatchPart -> Tree -> Maybe BindingDict
-matchAndDoSomething match t = loop emptyDict match t
-	where
-	loop :: BindingDict -> PatternMatchPart -> Tree -> Maybe BindingDict
-	loop dict match t = case match of
-		(Variable bindName) ->
-			Just (bindingAdd dict bindName t)
-		(NameMatch bindName) ->
-			case t of
-				(Leaf symName) ->
-					if bindName == symName
-					then Just (bindingAdd dict bindName t)
-					else Nothing -- Names don't match
-				(Branch {}) ->
-					Nothing -- NameMatch cannot match a tree!
+matchAndDoSomething match t = matchWithDict emptyDict match t
 
-		(MatchGroup p []) ->
-			matchAndDoSomething p t
-		(MatchGroup p ps) ->
-			case t of
-				(Branch x []) ->
-					matchAndDoSomething match x
-				(Branch x xs) ->
-					matchGroups (p : ps) (x : xs) >>= (return . bindingConcat dict)
-				(Leaf x) ->
-					Nothing
+matchWithDict :: BindingDict -> PatternMatchPart -> Tree -> Maybe BindingDict
+matchWithDict dict match t = case match of
+	(Variable bindName) ->
+		Just (bindingAdd dict bindName t)
+	(NameMatch bindName) ->
+		case t of
+			(Leaf symName) ->
+				if bindName == symName
+				then Just (bindingAdd dict bindName t)
+				else Nothing -- Names don't match
+			(Branch {}) ->
+				Nothing -- NameMatch cannot match a tree!
 
-matchGroups :: [PatternMatchPart] -> [Tree] -> Maybe BindingDict
-matchGroups ps ts = loop emptyDict ps ts
-	where
-	loop :: BindingDict -> [PatternMatchPart] -> [Tree] -> Maybe BindingDict
-	loop dict [] [] = Just dict
-	loop dict [] ts = Nothing -- Size should be equal
-	loop dict ps [] = Nothing -- Size should be equal
-	loop dict (p : ps) (t : ts) =
-		case matchAndDoSomething p t of
-			Nothing -> Nothing
-			Just retDict ->
-				let newDict = bindingConcat dict retDict
-				in loop newDict ps ts
+	(MatchGroup p []) ->
+		matchWithDict dict p t
+	(MatchGroup p ps) ->
+		case t of
+			(Branch x []) ->
+				matchWithDict dict match x
+			(Branch x xs) ->
+				matchGroups dict (p : ps) (x : xs) >>= (return . bindingConcat dict)
+			(Leaf x) ->
+				Nothing
 
+matchGroups :: BindingDict -> [PatternMatchPart] -> [Tree] -> Maybe BindingDict
+matchGroups dict [] [] = Just dict
+matchGroups dict [] ts = Nothing -- Size should be equal
+matchGroups dict ps [] = Nothing -- Size should be equal
+matchGroups dict (p : ps) (t : ts) =
+	case matchWithDict dict p t of
+		Nothing -> Nothing
+		Just retDict ->
+			let newDict = bindingConcat dict retDict
+			in matchGroups newDict ps ts
 
 data ParseMatchError
 	= Unknown
