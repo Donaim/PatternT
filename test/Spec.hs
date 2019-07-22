@@ -44,12 +44,20 @@ comparison =
 	, ("x + 2x",                                           "3x")
 	]
 
+strs       = map fst comparison
+treeTokens = map tokenize strs
+trees      = map makeTree treeTokens
+okTrees    = snd (partitionEithers trees)
+
 patterns :: [String]
 patterns =
 	[ "a [+] b -> b + a"
 	, "x [*] (a [+] b) -> (x * a) + (x * b)"
 	, "x [*] y -> x + y"
 	]
+
+matches   = map parseMatch patterns
+okMatches = snd (partitionEithers matches)
 
 main :: IO ()
 main = putStrLn "Test suit is not implemented yet."
