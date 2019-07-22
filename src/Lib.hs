@@ -347,7 +347,7 @@ showNoZeroes x = if anydotq then striped else s
 		s = show x
 		r = reverse s
 		anydotq = any (== '.') s
-		striped = reverse $ dropWhile (\c -> c == '0' || c == '.') r
+		striped = reverse $ (dropWhile (== '.') . dropWhile (== '0')) r
 
 -- TODO: figure out when brackets ARE required. So far it seems like they never are
 stringifyTerm :: Term -> String
