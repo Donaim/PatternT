@@ -66,23 +66,12 @@ tokenize s = reverse exprs
 			(c : r) ->
 				tokenize' buffer (cur ++ [c]) r
 
--- TODO: Add support of unary operators. Implementation idea: should be of form (-x) so that there just simply no other
+-- TODO: Add support of unary operators. Implementation idea: should be of form (- x) so that there just simply no other
 -- NOTE: May want to add n-ary functions. Implementation idea: should be of form (!func a b c d) so that arguments don't have operator between them
 data Tree
 	= Leaf Atom
 	| Branch Tree Tree
 	deriving (Eq, Show, Read)
-
--- treePriority :: Tree -> Int
--- treePriority t = case t of
--- 	Leaf {} -> 0
--- 	BranchAdd2 {} -> 1
--- 	BranchMult {} -> 2
--- 	BranchAdd1 {} -> 2
-
--- isOp :: Expr -> Bool
--- isOp (O op) = True
--- isOp (_)    = False
 
 -- makeTree :: [Expr] -> Either ParseError Tree
 -- makeTree exprs =
