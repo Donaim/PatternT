@@ -46,8 +46,9 @@ comparison =
 
 patterns :: [String]
 patterns =
-	[ "a [+] b -> b [+] a"
-	, "x [*] (a + b) -> (x [*] a) + (x [*] b)"
+	[ "a [+] b -> b + a"
+	, "x [*] (a [+] b) -> (x * a) + (x * b)"
+	, "x [*] y -> x + y"
 	]
 
 main :: IO ()
