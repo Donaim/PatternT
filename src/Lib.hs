@@ -175,8 +175,9 @@ data Term
 	| TMul Term Term
 	deriving (Eq, Show, Read)
 
-reduce :: Tree -> Term
-reduce tree = case tree of
+-- | Transform syntax tree to Term tree
+transform :: Tree -> Term
+transform tree = case tree of
 	Leaf atom ->
 		case atom of
 			Number x -> TNum x
@@ -188,10 +189,10 @@ reduce tree = case tree of
 				(_) -> TAdd x y
 			(_) -> TAdd x y
 		where
-		x = reduce a
-		y = reduce b
+		x = transform a
+		y = transform b
 
-	BranchAdd1 x -> (reduce x)
+	BranchAdd1 x -> (transform x)
 	BranchMult a b ->
 		case x of
 			TNum nx -> case y of
@@ -199,8 +200,8 @@ reduce tree = case tree of
 				(_) -> TMul x y
 			(_) -> TMul x y
 		where
-		x = reduce a
-		y = reduce b
+		x = transform a
+		y = transform b
 
 maybeNext :: a -> (a -> Maybe a) -> (a -> Maybe a) -> Maybe a
 maybeNext a f1 f2 =

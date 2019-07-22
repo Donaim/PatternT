@@ -47,7 +47,7 @@ strs    = map fst comparison
 tokens  = map tokenize strs
 trees   = map makeTree tokens
 okTrees = snd $ partitionEithers trees
-reduced = map reduce okTrees
+reduced = map transform okTrees
 sorted  = map sortCommutative reduced
 
 -- remb0    = map (applyTerm reduceBrackets) sorted
@@ -98,8 +98,8 @@ comps =
 	, (LT, ("a + b + c", "a + b + c + d")) ]
 compsResults =
 	let seconds = map snd comps
-	in let xs = map reduce $ snd $ partitionEithers $ map (makeTree . tokenize) $ map fst seconds
-	in let ys = map reduce $ snd $ partitionEithers $ map (makeTree . tokenize) $ map snd seconds
+	in let xs = map transform $ snd $ partitionEithers $ map (makeTree . tokenize) $ map fst seconds
+	in let ys = map transform $ snd $ partitionEithers $ map (makeTree . tokenize) $ map snd seconds
 	in zipWith compare xs ys
 compsTest = map fst comps == compsResults
 
