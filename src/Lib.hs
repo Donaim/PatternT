@@ -91,9 +91,11 @@ data PatternMatchPart
 data PatternReplacePart
 	= RVar Symbol
 	| RGroup PatternReplacePart [PatternReplacePart]
+	deriving (Eq, Show, Read)
 
 data SimplifyPattern
 	= SimplifyPatternRule PatternMatchPart PatternReplacePart
+	deriving (Eq, Show, Read)
 
 type BindingDict = [(String, Tree)]
 
