@@ -58,7 +58,15 @@ optimizationStack fs term = loop term 0 fs
 		let (newterm, iter) = applyTerm f term
 		in loop newterm (counter + iter) fs
 
-optcycle term = optimizationStack [sortCommutative, sortAssoc, reduceAddNums, reduceAddSymbols, reduceMult, reduceDistributive, reduceConstants] term
+optcycle term = optimizationStack 
+	[ sortCommutative
+	, sortAssoc
+	, reduceAddNums
+	, reduceAddSymbols
+	, reduceMult
+	, reduceDistributive
+	, reduceConstants
+	] term
 optloop term =
 	let (newterm, iter) = optcycle term
 	in if iter > 0
