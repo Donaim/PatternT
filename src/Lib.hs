@@ -136,7 +136,14 @@ matchGetDict match t = matchWithDict emptyDict match t
 matchWithDict :: BindingDict -> PatternMatchPart -> Tree -> Maybe BindingDict
 matchWithDict dict match t = case match of
 	(Variable bindName) ->
-		Just (bindingAdd dict bindName t)
+		case bindingGet dict bindName of
+			Nothing ->
+				Just (bindingAdd dict bindName t)
+			Just value ->
+				if t == value
+				then Just (bindingAdd dict bindName t)
+				else Nothing
+
 	(NameMatch bindName) ->
 		case t of
 			(Leaf symName) ->

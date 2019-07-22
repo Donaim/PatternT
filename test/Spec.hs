@@ -9,7 +9,7 @@ import Control.Monad
 
 comparison :: [(String, String)]
 comparison =
-	[ ("1 * 2",                                            "2")
+	[ ("1 + 1",                                            "2")
 	, ("1 + 2 + 3",                                        "6")
 	, ("+ 1 + 2 + 3",                                      "6")
 	, ("+ 1 * 2 * 3",                                      "6")
@@ -51,7 +51,7 @@ okTrees    = snd (partitionEithers trees)
 
 patterns :: [String]
 patterns =
-	[ "a [*] b -> b + a"
+	[ "a [+] a -> 2 * a"
 	, "x [*] (a [+] b) -> (x * a) + (x * b)"
 	, "x [*] y -> x + y"
 	]
