@@ -341,11 +341,12 @@ sortAssoc t = case t of
 	(_) -> Nothing
 
 -- | Strip all trailing zeroes
-showNoZeroes :: (Real a, Show a) => a -> String
-showNoZeroes x = striped
+showNoZeroes :: (Show a) => a -> String
+showNoZeroes x = if anydotq then striped else s
 	where
 		s = show x
 		r = reverse s
+		anydotq = any (== '.') s
 		striped = reverse $ dropWhile (\c -> c == '0' || c == '.') r
 
 -- TODO: figure out when brackets ARE required. So far it seems like they never are
