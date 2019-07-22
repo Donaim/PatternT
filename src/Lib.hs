@@ -117,7 +117,7 @@ bindingConcat a b = a ++ b
 matchAndReplace :: SimplifyPattern -> Tree -> Maybe Tree
 matchAndReplace pattern t = case pattern of
 	(SimplifyPatternRule match replace) ->
-		case matchAndDoSomething match t of
+		case matchGetDict match t of
 			Nothing -> Nothing
 			Just dict -> Just (replaceWithDict dict replace)
 
@@ -130,8 +130,8 @@ replaceWithDict dict replace = case replace of
 	(RGroup x xs) ->
 		(Branch (replaceWithDict dict x) (map (replaceWithDict dict) xs))
 
-matchAndDoSomething :: PatternMatchPart -> Tree -> Maybe BindingDict
-matchAndDoSomething match t = matchWithDict emptyDict match t
+matchGetDict :: PatternMatchPart -> Tree -> Maybe BindingDict
+matchGetDict match t = matchWithDict emptyDict match t
 
 matchWithDict :: BindingDict -> PatternMatchPart -> Tree -> Maybe BindingDict
 matchWithDict dict match t = case match of
