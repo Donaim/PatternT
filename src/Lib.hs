@@ -96,6 +96,9 @@ data SimplifyPattern
 
 type BindingDict = [(String, Tree)]
 
+emptyDict :: BindingDict
+emptyDict = []
+
 bindingGet :: BindingDict -> String -> Maybe Tree
 bindingGet dict key =
 	case find ((== key) . fst) dict of
@@ -108,7 +111,41 @@ bindingAdd dict key value = (key, value) : dict
 bindingConcat :: BindingDict -> BindingDict -> BindingDict
 bindingConcat a b = a ++ b
 
-matchAndDoSomething :: PatternMatchPart -> Tree -> BindingDict -> Maybe BindingDict
-matchAndDoSomething match t dict = case t of
-	(_) -> undefined
+matchAndDoSomething :: PatternMatchPart -> Tree -> Maybe BindingDict
+matchAndDoSomething match t = loop emptyDict match t
+	where
+	loop :: BindingDict -> PatternMatchPart -> Tree -> Maybe BindingDict
+	loop dict match t = case match of
+		(Variable bindName) ->
+			Just (bindingAdd dict bindName t)
+		(NameMatch bindName) ->
+			case t of
+				(Leaf symName) ->
+					if bindName == symName
+					then Just (bindingAdd dict bindName t)
+					else Nothing -- Names don't match
+				(Branch {}) ->
+					Nothing -- NameMatch cannot match a tree!
+		(MatchGroup p ps) ->
+			case t of
+				(Branch x xs) ->
+					matchGroups (p : ps) (x : xs) >>= (return . bindingConcat dict)
+				(Leaf x) ->
+					case ps of
+						-- IMPORTANT: Singleton list could be equal to leaf! Implicit rule: ((a)) -> (a) -> a
+						[] -> matchAndDoSomething p t >>= (return . bindingConcat dict)
+						more -> Nothing
 
+matchGroups :: [PatternMatchPart] -> [Tree] -> Maybe BindingDict
+matchGroups ps ts = loop emptyDict ps ts
+	where
+	loop :: BindingDict -> [PatternMatchPart] -> [Tree] -> Maybe BindingDict
+	loop dict [] [] = Just dict
+	loop dict [] ts = Nothing -- Size should be equal
+	loop dict ps [] = Nothing -- Size should be equal
+	loop dict (p : ps) (t : ts) =
+		case matchAndDoSomething p t of
+			Nothing -> Nothing
+			Just retDict ->
+				let newDict = bindingConcat dict retDict
+				in loop newDict ps ts
