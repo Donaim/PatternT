@@ -212,42 +212,67 @@ maybeNext a f1 f2 =
 			Just newest -> Just newest
 
 reduceAddSymbols :: Term -> Maybe Term
--- x * W + y * W -> (a + b) * W
-reduceAddSymbols (TAdd (TMul (TNum x) cx) (TMul (TNum y) cy)) =
-	if cx == cy
-	then Just (TMul (TNum (x + y)) cx)
-	else Nothing
--- x * W + (y * W + Z) -> (x + y) * W + Z
-reduceAddSymbols (TAdd (TMul (TNum x) cx) (TAdd (TMul (TNum y) cy) z)) =
-	if cx == cy
-	then Just (TAdd (TMul (TNum (x + y)) cx) z)
-	else Nothing
-reduceAddSymbols (_) = Nothing
+reduceAddSymbols t = case t of
+
+	-- x * W + y * W -> (a + b) * W
+	(TAdd (TMul (TNum x) cx) (TMul (TNum y) cy)) ->
+		if cx == cy
+		then Just (TMul (TNum (x + y)) cx)
+		else Nothing
+
+	-- x * W + (y * W + Z) -> (x + y) * W + Z
+	(TAdd (TMul (TNum x) cx) (TAdd (TMul (TNum y) cy) z)) ->
+		if cx == cy
+		then Just (TAdd (TMul (TNum (x + y)) cx) z)
+		else Nothing
+
+	(_) -> Nothing
 
 reduceAddNums :: Term -> Maybe Term
--- x + y -> x + y (reduced)
-reduceAddNums (TAdd (TNum x) (TNum y)) = Just (TNum (x + y))
--- a + (b + W) -> (a + b) + W
-reduceAddNums (TAdd (TNum a) (TAdd (TNum b) w)) = Just (TAdd (TNum (a + b)) w)
-reduceAddNums (_) = Nothing
+reduceAddNums t = case t of
+
+	-- x + y -> x + y (reduced)
+	(TAdd (TNum x) (TNum y)) -> Just
+		(TNum (x + y))
+
+	-- a + (b + W) -> (a + b) + W
+	(TAdd (TNum a) (TAdd (TNum b) w)) -> Just
+		(TAdd (TNum (a + b)) w)
+
+	(_) -> Nothing
 
 reduceMult :: Term -> Maybe Term
--- x * y -> x * y (reduced)
-reduceMult (TMul (TNum x) (TNum y)) = Just (TNum (x * y))
--- a * (b * W) -> (a * b) * W
-reduceMult (TMul (TNum a) (TMul (TNum b) w)) = Just (TMul (TNum (a * b)) w)
-reduceMult (_) = Nothing
+reduceMult t = case t of
+
+	-- x * y -> x * y (reduced)
+	(TMul (TNum x) (TNum y)) -> Just
+		(TNum (x * y))
+
+	-- a * (b * W) -> (a * b) * W
+	(TMul (TNum a) (TMul (TNum b) w)) -> Just
+		(TMul (TNum (a * b)) w)
+
+	(_) -> Nothing
 
 reduceDistributive :: Term -> Maybe Term
--- x * (a + b) -> x * a + x * b
-reduceDistributive (TMul x (TAdd a b)) = Just (TAdd (TMul x a) (TMul x b))
-reduceDistributive (_) = Nothing
+reduceDistributive t = case t of
+	-- x * (a + b) -> x * a + x * b
+	(TMul x (TAdd a b)) -> Just
+		(TAdd (TMul x a) (TMul x b))
+
+	(_) -> Nothing
 
 reduceConstants :: Term -> Maybe Term
-reduceConstants (TMul (TNum 0) x) = Just (TNum 0)
-reduceConstants (TMul (TNum 1) x) = Just x
-reduceConstants (TAdd (TNum 0) x) = Just x
-reduceConstants (_) = Nothing
+reduceConstants t = case t of
+
+	(TMul (TNum 0) x) -> Just
+		(TNum 0)
+	(TMul (TNum 1) x) -> Just
+		x
+	(TAdd (TNum 0) x) -> Just
+		x
+
+	(_) -> Nothing
 
 applyTerm :: (Term -> Maybe Term) -> Term -> (Term, Int)
 applyTerm func t = case t of
