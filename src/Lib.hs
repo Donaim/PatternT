@@ -81,6 +81,24 @@ data ParseError
 	| ChildrenErrors [Expr] [ParseError]
 	deriving (Eq, Show, Read)
 
+data PatternMatchPart
+	= Variable Symbol
+	| NameMatch Symbol
+	| MatchGroup PatternMatchPart [PatternMatchPart]
+	deriving (Eq, Show, Read)
+
+data PatternReplacePart
+	= RVar Symbol
+	| RGroup PatternReplacePart [PatternReplacePart]
+
+data SimplifyPattern
+	= SimplifyPatternRule PatternMatchPart PatternReplacePart
+
+matchAndReplace :: SimplifyPattern -> Tree -> Maybe Tree
+matchAndReplace (SimplifyPatternRule match replace) t = case t of
+	(_) -> undefined
+
+
 -- make1 :: [Expr] -> Op -> [Expr] -> Either ParseError Tree
 -- make1 prev op next =
 -- 	case op of
