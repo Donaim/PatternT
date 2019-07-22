@@ -67,9 +67,9 @@ makeTree exprs = case exprs of
 	(x : xs) ->
 		case bad of
 			[] -> case mytree of
-				Left err -> Left (FuncError err)
+				Left err -> Left (FuncError exprs err)
 				Right me -> Right (Branch me good)
-			errors -> Left (ChildrenErrors errors)
+			errors -> Left (ChildrenErrors exprs errors)
 		where
 		mytree = makeTree [x]
 		childs = map (\ y -> makeTree [y]) xs
@@ -77,8 +77,8 @@ makeTree exprs = case exprs of
 
 data ParseError
 	= EmptyTree
-	| FuncError ParseError
-	| ChildrenErrors [ParseError]
+	| FuncError [Expr] ParseError
+	| ChildrenErrors [Expr] [ParseError]
 	deriving (Eq, Show, Read)
 
 -- make1 :: [Expr] -> Op -> [Expr] -> Either ParseError Tree
