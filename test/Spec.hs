@@ -41,6 +41,7 @@ comparison =
 	, ("(0 + 1) * (3 + x)",                                "3 + x")
 	, ("0 * x + y",                                        "y")
 	, ("3y + 0 * x",                                       "3y")
+	, ("x + 2x",                                           "3x")
 	]
 
 strs    = map fst comparison

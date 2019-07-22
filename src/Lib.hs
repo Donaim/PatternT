@@ -226,6 +226,12 @@ reduceAddSymbols t = case t of
 		then Just (TAdd (TMul (TNum (x + y)) cx) z)
 		else Nothing
 
+	-- W + y * W -> (1 + y) * W
+	(TAdd cx (TMul (TNum y) cy)) ->
+		if cx == cy
+		then Just (TMul (TNum (1 + y)) cx)
+		else Nothing
+
 	(_) -> Nothing
 
 reduceAddNums :: Term -> Maybe Term
