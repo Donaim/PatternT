@@ -242,6 +242,10 @@ reduceDistributive :: Term -> Maybe Term
 reduceDistributive (TMul x (TAdd a b)) = Just (TAdd (TMul x a) (TMul x b))
 reduceDistributive (_) = Nothing
 
+reduceZeroTimes :: Term -> Maybe Term
+reduceZeroTimes (TMul (TNum 0) x) = Just (TNum 0)
+reduceZeroTimes (_) = Nothing
+
 applyTerm :: (Term -> Maybe Term) -> Term -> (Term, Int)
 applyTerm func t = case t of
 	TNum {} -> case func t of

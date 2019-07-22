@@ -37,6 +37,7 @@ comparison =
 	, ("1 + (2x + 3 + 9 + 20 + (3x + 5 + (1 + 2 + 3))))",  "44 + 5x")
 	, ("1 + (2 + 3 * kek  ) + 5 * (  2 + 3) + 2",          "30 + 3kek")
 	, ("(a + b) * (b + c)",                                "a * b + b * b + a * c + b * c")
+	, ("1 + 0 * (3 + x)",                                  "1")
 	]
 
 strs    = map fst comparison
@@ -56,7 +57,7 @@ optimizationStack fs term = loop term 0 fs
 		let (newterm, iter) = applyTerm f term
 		in loop newterm (counter + iter) fs
 
-optcycle term = optimizationStack [sortCommutative, sortAssoc, reduceAddNums, reduceAddSymbols, reduceMult, reduceDistributive] term
+optcycle term = optimizationStack [sortCommutative, sortAssoc, reduceAddNums, reduceAddSymbols, reduceMult, reduceDistributive, reduceZeroTimes] term
 optloop term =
 	let (newterm, iter) = optcycle term
 	in if iter > 0
