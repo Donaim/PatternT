@@ -3,32 +3,19 @@ module Lib where
 import Text.Read (readMaybe)
 import Data.List
 import Data.Maybe
+import Data.Either
 import Debug.Trace
 import Data.Char
 
 traceS :: (Show a) => String -> a -> a
 traceS text x = trace (text ++ show x) x
 
+type Symbol = String
+
 data Expr
-	= A Atom
-	| O String
+	= Atom Symbol
 	| Group [Expr]
 	deriving (Eq, Show, Read)
-
-data Atom
-	= Number Double
-	| Symbol String
-	deriving (Eq, Show, Read)
-
-classify :: String -> Expr
-classify s =
-	case readMaybe s :: Maybe Double of
-		Just x ->
-			A (Number x)
-		Nothing ->
-			if not (isAlphaNum (head s))
-			then O s
-			else A (Symbol s)
 
 tokenize :: String -> [Expr]
 tokenize s = reverse exprs
@@ -41,22 +28,22 @@ tokenize s = reverse exprs
 			"" ->
 				if null cur
 				then (buffer, "")
-				else (classify cur : buffer, "")
+				else (Atom cur : buffer, "")
 			(')' : r) ->
 				if null cur
 				then (buffer, r)
-				else (classify cur : buffer, r)
+				else (Atom cur : buffer, r)
 
 			(' ' : r) -> tokenize' newBuffer "" r
 				where
-				exp = classify cur
+				exp = Atom cur
 				newBuffer =
 					if null cur
 					then buffer
 					else exp : buffer
 			('(' : r) -> tokenize' newBuffer "" rest
 				where
-				exp = classify cur
+				exp = Atom cur
 				(inBrackets, rest) = tokenize' [] "" r
 				g = Group (reverse inBrackets)
 				newBuffer =
@@ -66,53 +53,33 @@ tokenize s = reverse exprs
 			(c : r) ->
 				tokenize' buffer (cur ++ [c]) r
 
--- TODO: Add support of unary operators. Implementation idea: should be of form (- x) so that there just simply no other
--- NOTE: May want to add n-ary functions. Implementation idea: should be of form (!func a b c d) so that arguments don't have operator between them
 data Tree
-	= Leaf Atom
-	| Branch Tree Tree
+	= Leaf Symbol
+	| Branch Tree [Tree]
 	deriving (Eq, Show, Read)
 
--- makeTree :: [Expr] -> Either ParseError Tree
--- makeTree exprs =
--- 	case exprs of
--- 		[] -> Left EmptyTree
--- 		[x] -> case x of
--- 			(A atom) -> Right $ Leaf atom
--- 			(Group exprs) -> makeTree exprs
--- 			(_) -> Left $ ExpectedAtom x
--- 		(x : xs) -> findmin Nothing ([], x, xs)
--- 	where
--- 	findmin :: Maybe Tree -> ([Expr], Expr, [Expr]) -> (Either ParseError Tree)
--- 	findmin current (prev, e, []) =
--- 		case current of
--- 			Just c -> Right c
--- 			Nothing -> Left $ NoOperators exprs
--- 	findmin current (prev, e, next) =
--- 		case e of
--- 			(O op) ->
--- 				case result of
--- 					Left e -> Left e
--- 					Right x -> case current of
--- 						Nothing -> findmin (Just x) follow
--- 						Just y ->
--- 							if treePriority x < treePriority y
--- 							then findmin (Just x) follow
--- 							else findmin (Just y) follow
--- 				where
--- 				result = (make1 prev op next)
+makeTree :: [Expr] -> Either ParseError Tree
+makeTree exprs = case exprs of
+	[] -> Left EmptyTree
+	[x] -> case x of
+		Atom sym -> Right (Leaf sym)
+		Group g -> makeTree g
+	(x : xs) ->
+		case bad of
+			[] -> case mytree of
+				Left err -> Left (FuncError err)
+				Right me -> Right (Branch me good)
+			errors -> Left (ChildrenErrors errors)
+		where
+		mytree = makeTree [x]
+		childs = map (\ y -> makeTree [y]) xs
+		(bad, good) = partitionEithers childs
 
--- 			(_) -> findmin current follow
--- 		where
--- 		follow = (prev ++ [e], head next, tail next)
-
--- data ParseError
--- 	= EArity Op [(Int, Int)] (Int, Int)
--- 	| EmptyTree
--- 	| NoOperators [Expr]
--- 	| ExpectedAtom Expr
--- 	| Other String
--- 	deriving (Eq, Show, Read)
+data ParseError
+	= EmptyTree
+	| FuncError ParseError
+	| ChildrenErrors [ParseError]
+	deriving (Eq, Show, Read)
 
 -- make1 :: [Expr] -> Op -> [Expr] -> Either ParseError Tree
 -- make1 prev op next =
