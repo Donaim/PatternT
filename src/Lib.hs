@@ -134,37 +134,36 @@ matchGetDict :: PatternMatchPart -> Tree -> Maybe BindingDict
 matchGetDict match t = matchWithDict emptyDict match t
 
 matchWithDict :: BindingDict -> PatternMatchPart -> Tree -> Maybe BindingDict
-matchWithDict dict match t = case match of
-	(Variable bindName) ->
-		case bindingGet dict bindName of
-			Nothing ->
-				Just (bindingAdd dict bindName t)
-			Just value ->
-				if t == value
-				then Just (bindingAdd dict bindName t)
-				else Nothing
+matchWithDict dict match t = case t of
+	(Branch singletonX []) ->
+		matchWithDict dict match singletonX -- Make sure that (x) = x, ((x)) = x
+	(_) -> case match of
+		(Variable bindName) ->
+			case bindingGet dict bindName of
+				Nothing ->
+					Just (bindingAdd dict bindName t)
+				Just value ->
+					if t == value
+					then Just (bindingAdd dict bindName t)
+					else Nothing
 
-	(NameMatch bindName) ->
-		case t of
-			(Leaf symName) ->
-				if bindName == symName
-				then Just (bindingAdd dict bindName t)
-				else Nothing -- Names don't match
-			(Branch x []) ->
-				matchWithDict dict match x
-			(Branch x xs) ->
-				Nothing
-	
-	(MatchGroup p []) ->
-		matchWithDict dict p t
-	(MatchGroup p ps) ->
-		case t of
-			(Branch x []) ->
-				matchWithDict dict match x
-			(Branch x xs) ->
-				matchGroups dict (p : ps) (x : xs) >>= (return . bindingConcat dict)
-			(Leaf x) ->
-				Nothing
+		(NameMatch bindName) ->
+			case t of
+				(Leaf symName) ->
+					if bindName == symName
+					then Just (bindingAdd dict bindName t)
+					else Nothing -- Names don't match
+				(Branch {}) -> -- This is not a singleton branch, so we dont ever match it
+					Nothing
+
+		(MatchGroup p []) ->
+			matchWithDict dict p t
+		(MatchGroup p ps) ->
+			case t of
+				(Branch x xs) ->
+					matchGroups dict (p : ps) (x : xs) >>= (return . bindingConcat dict)
+				(Leaf x) ->
+					Nothing
 
 matchGroups :: BindingDict -> [PatternMatchPart] -> [Tree] -> Maybe BindingDict
 matchGroups dict [] [] = Just dict
