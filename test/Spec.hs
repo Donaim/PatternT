@@ -30,6 +30,8 @@ coms = [
 		[ ("x or x",                                           "x")
 		, ("0 and x",                                          "0")
 		, ("(0 and x) and x",                                  "0")
+		, ("not ((0 and x) and x)",                            "1")
+		, ("(not ((0 and x) and x)) and x",                    "x")
 		]
 	)]
 
