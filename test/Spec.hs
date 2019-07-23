@@ -146,4 +146,13 @@ displays = map display (catMaybes notMatches)
 -- MAIN --
 ----------
 main :: IO ()
-main = putStrLn "Test suit is not implemented yet."
+main = do
+	unless (all null badTrees) $ do
+		putStrLn $ "Bad trees:" ++ show badTrees
+		exitFailure
+	unless (all null badRules) $ do
+		putStrLn $ "Bad rules: " ++ show badRules
+		exitFailure
+	unless (null displays) $ do
+		mapM_ putStrLn displays
+		exitFailure
