@@ -150,9 +150,11 @@ matchWithDict dict match t = case match of
 				if bindName == symName
 				then Just (bindingAdd dict bindName t)
 				else Nothing -- Names don't match
-			(Branch {}) ->
-				Nothing -- NameMatch cannot match a tree!
-
+			(Branch x []) ->
+				matchWithDict dict match x
+			(Branch x xs) ->
+				Nothing
+	
 	(MatchGroup p []) ->
 		matchWithDict dict p t
 	(MatchGroup p ps) ->
