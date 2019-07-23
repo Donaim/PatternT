@@ -63,6 +63,25 @@ okTrees = map snd partitionedTrees
 
 badTrees = map fst partitionedTrees
 
+----------------
+-- SIMPLIFIED --
+----------------
+
+simplified = map simpli (zip okRules okTrees)
+
+simpli :: ([SimplifyPattern], [Tree]) -> [[Tree]]
+simpli (rules, trees) =
+	map (applySimplificationsUntil0 rules) trees
+
+simpliString :: [[Tree]] -> [[String]]
+simpliString trees = map (map stringifyTree) trees
+
+simplifiedStrings :: [[[String]]]
+simplifiedStrings = map simpliString simplified
+
+simplifiedStringsLasts :: [[String]]
+simplifiedStringsLasts = map (map last) simplifiedStrings
+
 ----------
 -- MAIN --
 ----------
