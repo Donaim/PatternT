@@ -132,7 +132,7 @@ displays = map display (catMaybes notMatches)
 	where
 	display :: (String, String, Int, Int) -> String
 	display (result, correct, x, y) = "\
-		\With these set of rules:\n" ++ rules ++ "\
+		\With this set of rules:\n" ++ rules ++ "\
 		\The result of:\n\t" ++ original ++ "\n\
 		\Was:\n\t" ++ result ++ "\n\
 		\Expected:\n\t" ++ correct ++ "\n\
