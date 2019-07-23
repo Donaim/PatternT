@@ -40,6 +40,9 @@ okRules    = map snd partitioned
 
 badRules = map fst partitioned
 
+okRulesStr :: [[String]]
+okRulesStr = map (map stringifySimplifyPattern) okRules
+
 -----------------
 -- EXPRESSIONS --
 -----------------
@@ -65,6 +68,9 @@ okTrees :: [[Tree]]
 okTrees = map snd partitionedTrees
 
 badTrees = map fst partitionedTrees
+
+okTreesStr :: [[String]]
+okTreesStr = map (map stringifyTree) okTrees
 
 ----------------
 -- SIMPLIFIED --
@@ -116,6 +122,25 @@ equalMatchQ0 (results, corrects) = map equalMatchQ1 (zip results corrects)
 
 equalMatchQ1 :: (String, String) -> Maybe (String, String)
 equalMatchQ1 (s1, s2) = if s1 == s2 then Nothing else Just (s1, s2)
+
+-------------
+-- DISPLAY --
+-------------
+
+displays :: [String]
+displays = map display (catMaybes notMatches)
+	where
+	display :: (String, String, Int, Int) -> String
+	display (result, correct, x, y) = "\
+		\With these set of rules:\n" ++ rules ++ "\
+		\The result of:\n\t" ++ original ++ "\n\
+		\Was:\n\t" ++ result ++ "\n\
+		\Expected:\n\t" ++ correct ++ "\n\
+		\The reductions were:\n" ++ reductions ++ "\n"
+		where
+		rules = unlines (map ("\t" ++) (okRulesStr !! x))
+		original = ((okTreesStr !! x) !! y)
+		reductions = unlines (map ("\t" ++) ((simplifiedStrings !! x) !! y))
 
 ----------
 -- MAIN --
