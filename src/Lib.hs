@@ -228,3 +228,18 @@ treeToReplacePattern t = case t of
 		(RVar s)
 	(Branch x xs) ->
 		(RGroup (treeToReplacePattern x) (map treeToReplacePattern xs))
+
+applyTree :: (Tree -> Maybe Tree) -> Tree -> (Tree, Int)
+applyTree func t = case t of
+	(Leaf s) -> case func t of
+		Just newt -> (newt, 1)
+		Nothing -> (t, 0)
+	(Branch x xs) -> case func t' of
+		Just newt -> (newt, 1 + xcount + xscount)
+		Nothing -> (t', 0 + xcount + xscount)
+		where
+		(newx, xcount) = applyTree func x
+		zipped  = map (applyTree func) xs
+		newxs   = map fst zipped
+		xscount = sum (map snd zipped)
+		t' = Branch newx newxs
