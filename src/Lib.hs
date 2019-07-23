@@ -267,12 +267,22 @@ applySimplifications patterns t0 = loop patterns t0
 			Just newt -> newt : (loop xs newt)
 			Nothing -> loop xs t
 
+-- Breaks on first success
+applyFirstSimplification :: [SimplifyPattern] -> Tree -> Maybe Tree
+applyFirstSimplification patterns t0 = loop patterns t0
+	where
+	loop patterns t = case patterns of
+		[] -> Nothing
+		(x : xs) -> case applyTreeOne (matchAndReplace x) t of
+			Just newt -> Just newt
+			Nothing -> loop xs t
+
 applySimplificationsUntil0 :: [SimplifyPattern] -> Tree -> [Tree]
 applySimplificationsUntil0 patterns0 t0 = t0 : loop patterns0 t0
 	where
-	loop patterns t = case applySimplifications patterns t of
-		[] -> []
-		steps -> steps ++ loop patterns (last steps)
+	loop patterns t = case applyFirstSimplification patterns t of
+		Nothing -> []
+		Just newt -> newt : loop patterns newt
 
 stringifyTree :: Tree -> String
 stringifyTree t = case t of
