@@ -244,6 +244,21 @@ applyTree func t = case t of
 		xscount = sum (map snd zipped)
 		t' = Branch newx newxs
 
+applySimplifications :: [SimplifyPattern] -> Tree -> (Tree, Int)
+applySimplifications patterns t0 = loop 0 patterns t0
+	where
+	loop counter patterns t = case patterns of
+		[] -> (t, counter)
+		(x : xs) ->
+			let (newt, c) = applyTree (matchAndReplace x) t
+			in loop (counter + c) xs newt
+
+applySimplificationsUntil0 :: [SimplifyPattern] -> Tree -> [Tree]
+applySimplificationsUntil0 patterns t =
+	case applySimplifications patterns t of
+		(newt, 0) -> [newt]
+		(newt, x) -> t : applySimplificationsUntil0 patterns newt
+
 stringifyTree :: Tree -> String
 stringifyTree t = case t of
 	(Leaf s) -> s
