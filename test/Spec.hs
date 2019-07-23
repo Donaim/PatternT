@@ -16,10 +16,15 @@ coms = [
 	),
 	(
 		[ "a [or] a -> a"
+		, "a [and] a -> a"
+		, "a [or] ([not] a) -> 1"
 		, "a [and] ([not] a) -> 0"
 		, "[1] [and] x -> x"
 		, "[0] [or] x -> x"
 		, "[0] [and] x -> 0"
+		, "[not] ([not] a) -> a"
+		, "[not] [0] -> 1"
+		, "[not] [1] -> 0"
 		]
 	,
 		[ ("x or x",                                           "x")
