@@ -243,3 +243,23 @@ applyTree func t = case t of
 		newxs   = map fst zipped
 		xscount = sum (map snd zipped)
 		t' = Branch newx newxs
+
+stringifyTree :: Tree -> String
+stringifyTree t = case t of
+	(Leaf s) -> s
+	(Branch x xs) -> "(" ++ stringifyTree x ++ concatMap ((' ' :) . stringifyTree) xs ++ ")"
+
+stringifyMatchPart :: PatternMatchPart -> String
+stringifyMatchPart t = case t of
+	(Variable s) -> s
+	(NameMatch name) -> "[" ++ name ++ "]"
+	(MatchGroup x xs) -> "(" ++ stringifyMatchPart x ++ concatMap ((' ' :) . stringifyMatchPart) xs ++ ")"
+
+stringifyReplacePart :: PatternReplacePart -> String
+stringifyReplacePart t = case t of
+	(RVar s) -> s
+	(RGroup x xs) -> "(" ++ stringifyReplacePart x ++ concatMap ((' ' :) . stringifyReplacePart) xs ++ ")"
+
+stringifySimplifyPattern :: SimplifyPattern -> String
+stringifySimplifyPattern p = case p of
+	(SimplifyPatternRule match replace) -> stringifyMatchPart match ++ " -> " ++ stringifyReplacePart replace
