@@ -244,20 +244,36 @@ applyTree func t = case t of
 		xscount = sum (map snd zipped)
 		t' = Branch newx newxs
 
-applySimplifications :: [SimplifyPattern] -> Tree -> (Tree, Int)
-applySimplifications patterns t0 = loop 0 patterns t0
+applyTreeOne :: (Tree -> Maybe Tree) -> Tree -> Maybe Tree
+applyTreeOne func t = case t of
+	(Leaf s) -> func t
+	(Branch x xs) -> case applyTreeOne func x of
+			Just newx -> Just (Branch newx xs)
+			Nothing -> case loop [] xs of
+				Just newme -> Just newme
+				Nothing -> func t
+		where
+		loop :: [Tree] -> [Tree] -> Maybe Tree
+		loop previus [] = Nothing
+		loop previus (c : cs) = case applyTreeOne func c of
+			Just newc -> Just (Branch x (previus ++ [newc] ++ cs))
+			Nothing -> loop (previus ++ [c]) cs
+
+applySimplifications :: [SimplifyPattern] -> Tree -> [Tree]
+applySimplifications patterns t0 = loop patterns t0
 	where
-	loop counter patterns t = case patterns of
-		[] -> (t, counter)
-		(x : xs) ->
-			let (newt, c) = applyTree (matchAndReplace x) t
-			in loop (counter + c) xs newt
+	loop patterns t = case patterns of
+		[] -> []
+		(x : xs) -> case applyTreeOne (matchAndReplace x) t of
+			Just newt -> newt : (loop xs newt)
+			Nothing -> loop xs t
 
 applySimplificationsUntil0 :: [SimplifyPattern] -> Tree -> [Tree]
-applySimplificationsUntil0 patterns t =
-	case applySimplifications patterns t of
-		(newt, 0) -> [newt]
-		(newt, x) -> t : applySimplificationsUntil0 patterns newt
+applySimplificationsUntil0 patterns0 t0 = t0 : loop patterns0 t0
+	where
+	loop patterns t = case applySimplifications patterns t of
+		[] -> []
+		steps -> steps ++ loop patterns (last steps)
 
 stringifyTree :: Tree -> String
 stringifyTree t = case t of
