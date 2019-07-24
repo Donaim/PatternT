@@ -205,10 +205,12 @@ treeToMatchPattern :: Tree -> PatternMatchPart
 treeToMatchPattern t = case t of
 	(Leaf s) ->
 		case s of
-			('[' : x : xs) ->
-				if last xs == ']'
-				then NameMatch (x : (init xs))
-				else Variable s
+			(x : xs) ->
+				if isDigit x || (not (isAlpha x))
+				then NameMatch s
+				else if null xs
+					then Variable s
+					else NameMatch s
 			(_) -> Variable s
 	(Branch x xs) ->
 		(MatchGroup (treeToMatchPattern x) (map treeToMatchPattern xs))
@@ -292,7 +294,7 @@ stringifyTree t = case t of
 stringifyMatchPart :: PatternMatchPart -> String
 stringifyMatchPart t = case t of
 	(Variable s) -> s
-	(NameMatch name) -> "[" ++ name ++ "]"
+	(NameMatch name) -> name
 	(MatchGroup x xs) -> "(" ++ stringifyMatchPart x ++ concatMap ((' ' :) . stringifyMatchPart) xs ++ ")"
 
 stringifyReplacePart :: PatternReplacePart -> String
