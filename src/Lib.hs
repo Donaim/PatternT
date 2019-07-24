@@ -183,12 +183,24 @@ bindingAdd dict key value = (key, value) : dict
 bindingConcat :: BindingDict -> BindingDict -> BindingDict
 bindingConcat a b = a ++ b
 
-matchAndReplace :: SimplifyPattern -> Tree -> Maybe Tree
-matchAndReplace pattern t = case pattern of
+checkCond :: (Tree -> Tree) -> BindingDict -> Conditional -> Bool
+checkCond simplify dict cond = case cond of
+	(EqCond left right) ->
+		simplify (replaceWithDict dict left)
+			== simplify (replaceWithDict dict right)
+	(NeqCond left right) ->
+		simplify (replaceWithDict dict left)
+			/= simplify (replaceWithDict dict right)
+
+matchAndReplace :: (Tree -> Tree) -> SimplifyPattern -> Tree -> Maybe Tree
+matchAndReplace simplify pattern t = case pattern of
 	(SimplifyPatternRule match replace conds) ->
 		case matchGetDict match t of
 			Nothing -> Nothing
-			Just dict -> Just (replaceWithDict dict replace)
+			Just dict ->
+				if all (checkCond simplify dict) conds
+				then Just (replaceWithDict dict replace)
+				else Nothing
 
 replaceWithDict :: BindingDict -> PatternReplacePart -> Tree
 replaceWithDict dict replace = case replace of
@@ -395,9 +407,10 @@ applyTreeOne func t = case t of
 applySimplifications :: [SimplifyPattern] -> Tree -> [Tree]
 applySimplifications patterns t0 = loop patterns t0
 	where
+	simplify = applySimplificationsUntil0Last patterns
 	loop patterns t = case patterns of
 		[] -> []
-		(x : xs) -> case applyTreeOne (matchAndReplace x) t of
+		(x : xs) -> case applyTreeOne (matchAndReplace simplify x) t of
 			Just newt -> newt : (loop xs newt)
 			Nothing -> loop xs t
 
@@ -405,11 +418,19 @@ applySimplifications patterns t0 = loop patterns t0
 applyFirstSimplification :: [SimplifyPattern] -> Tree -> Maybe Tree
 applyFirstSimplification patterns t0 = loop patterns t0
 	where
+	simplify = applySimplificationsUntil0Last patterns
 	loop patterns t = case patterns of
 		[] -> Nothing
-		(x : xs) -> case applyTreeOne (matchAndReplace x) t of
+		(x : xs) -> case applyTreeOne (matchAndReplace simplify x) t of
 			Just newt -> Just newt
 			Nothing -> loop xs t
+
+applySimplificationsUntil0Last :: [SimplifyPattern] -> Tree -> Tree
+applySimplificationsUntil0Last patterns0 t0 = loop patterns0 t0
+	where
+	loop patterns t = case applyFirstSimplification patterns t of
+		Nothing -> t
+		Just newt -> loop patterns newt
 
 applySimplificationsUntil0 :: [SimplifyPattern] -> Tree -> [Tree]
 applySimplificationsUntil0 patterns0 t0 = t0 : loop patterns0 t0
