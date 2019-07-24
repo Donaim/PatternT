@@ -1,9 +1,18 @@
 # hacalc  
 
 Symbolic calculator  
-Reduces expressions using rules of algebra  
+Reduces expressions using pattern-based rules  
 
-Terms for this calculator represent a field of Rationals + algebraic extensions of finite strings  
-Rules are peano axioms and theorems that follow  
-In practice, calculator adds rational numbers and simplifies the rest using laws of arithmetic  
-Adding new rules is simple  
+## Examples
+
+rules:  
+```
+a + a -> a
+a + b -> b
+```
+produce:
+```
+x + (x + x) -> x
+(y + x) + y -> y
+```
+
