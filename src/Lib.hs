@@ -6,6 +6,7 @@ import Data.Maybe
 import Data.Either
 import Debug.Trace
 import Data.Char
+import Control.Monad
 
 traceS :: (Show a) => String -> a -> a
 traceS text x = trace (text ++ show x) x
@@ -247,18 +248,59 @@ matchGroups dict (p : ps) (t : ts) =
 			in matchGroups newDict ps ts
 
 data ParseMatchError
-	= Unknown
+	= Unknown String
 	| SplitFailed [String]
+	| CondExpected String
 	| MakeTreeError ParseError
 	deriving (Eq, Show, Read)
 
+maybeHead :: [a] -> Maybe a
+maybeHead [] = Nothing
+maybeHead (x : xs) = Just x
+
 parseMatch :: String -> Either ParseMatchError SimplifyPattern
 parseMatch text = do
+		replacePart <- maybe (Left $ SplitFailed betweenPipes) Right (maybeHead betweenPipes)
+		unless (null badConds) (Left $ head badConds)
+
 		match <- parseMatchPart beforeArrow
-		replace <- parseReplacePart afterArrow
-		return (SimplifyPatternRule match replace [])
+		replace <- parseReplacePart replacePart
+
+		return (SimplifyPatternRule match replace goodConds)
+
 	where
 	(beforeArrow, _, afterArrow) = partitionString "->" text
+
+	goodConds = snd partitionedBetween
+	badConds = fst partitionedBetween
+
+	partitionedBetween = partitionEithers mappedBetween
+	mappedBetween = map parseCond (tail betweenPipes)
+	betweenPipes = betweenPipesF afterArrow
+
+	betweenPipesF :: String -> [String]
+	betweenPipesF s = let (beforePipe, pipe, afterPipe) = partitionString "|" s
+		in case pipe of
+			[] -> [beforePipe]
+			(_) -> beforePipe : betweenPipesF afterPipe
+
+
+parseCond :: String -> Either ParseMatchError Conditional
+parseCond text =
+	case partitionString "!=" text of
+		(left, [], right) -> secondTry
+		(left, neq, right) -> do
+			rleft <- parseReplacePart left
+			rright <- parseReplacePart right
+			return (NeqCond rleft rright)
+
+	where
+	secondTry = case partitionString "==" text of
+		(left, [], right) -> Left $ CondExpected text
+		(left, eq, right) -> do
+			rleft <- parseReplacePart left
+			rright <- parseReplacePart right
+			return (EqCond rleft rright)
 
 partitionString :: String -> String -> (String, String, String)
 partitionString break s =
