@@ -8,6 +8,15 @@ import Control.Monad
 coms :: [([String], [(String, String)])]
 coms = [
 	(
+		[ "a [+] a -> a"
+		, "a [+] b -> b"
+		]
+	,
+		[ ("x + (x + x)",                                      "x")
+		, ("(y + x) + y",                                      "y")
+		]
+	),
+	(
 		[ "a [+] a -> 2 * a"
 		]
 	,
