@@ -165,6 +165,7 @@ data PatternReplacePart
 data Conditional
 	= EqCond PatternReplacePart PatternReplacePart
 	| NeqCond PatternReplacePart PatternReplacePart
+	| NotmatchCond PatternReplacePart PatternMatchPart
 	deriving (Eq, Show, Read)
 
 data SimplifyPattern
@@ -196,6 +197,8 @@ checkCond simplify dict cond = case cond of
 	(NeqCond left right) ->
 		simplify (replaceWithDict dict left)
 			/= simplify (replaceWithDict dict right)
+	(NotmatchCond left right) ->
+		isNothing $ matchWithDict dict right $ simplify (replaceWithDict dict left)
 
 matchAndReplace :: (Tree -> Tree) -> SimplifyPattern -> Tree -> Maybe Tree
 matchAndReplace simplify pattern t = case pattern of
@@ -325,11 +328,18 @@ parseCond text =
 
 	where
 	secondTry = case partitionString "==" text of
-		(left, [], right) -> Left $ CondExpected text
+		(left, [], right) -> thirdTry
 		(left, eq, right) -> do
 			rleft <- parseReplacePart left
 			rright <- parseReplacePart right
 			return (EqCond rleft rright)
+
+	thirdTry = case partitionString "!>" text of
+		(left, [], right) -> Left $ CondExpected text
+		(left, eq, right) -> do
+			rleft <- parseReplacePart left
+			rright <- parseMatchPart right
+			return (NotmatchCond rleft rright)
 
 partitionString :: String -> String -> (String, String, String)
 partitionString break s =
@@ -483,6 +493,7 @@ stringifyReplacePart t = case t of
 stringifyCond :: Conditional -> String
 stringifyCond (EqCond a b) = stringifyReplacePart a ++ " == " ++ stringifyReplacePart b
 stringifyCond (NeqCond a b) = stringifyReplacePart a ++ " != " ++ stringifyReplacePart b
+stringifyCond (NotmatchCond a b) = stringifyReplacePart a ++ " !> " ++ stringifyMatchPart b
 
 stringifySimplifyPattern :: SimplifyPattern -> String
 stringifySimplifyPattern p = case p of
