@@ -105,30 +105,51 @@ data BuiltinRule
 	| BuiltinMultiply
 	deriving (Eq, Show, Read)
 
-builtinReplace :: BuiltinRule -> [PatternReplacePart] -> BindingDict -> Maybe Tree
-builtinReplace rule args dict =
-	if any isNothing mrargs || not (null uncastable)
-	then Nothing
-	else Just $ case rule of
-		BuiltinAdd -> withOp (+) 0
-		BuiltinMultiply -> withOp (*) 1
+builtinReplace :: BuiltinRule -> [PatternReplacePart] -> BindingDict -> Tree
+builtinReplace rule args dict = case rule of
+	BuiltinAdd -> withOp (+) 0
+	BuiltinMultiply -> withOp (*) 1
 
 	where
-	mrargs :: [Maybe Tree]
-	mrargs = map (replaceWithDict dict) args
-	rargs = map fromJust mrargs
+	rargs :: [Tree]
+	rargs = map (replaceWithDict dict) args
 
-	numCasted :: [Number]
-	uncastable :: [Tree]
-	(numCasted, uncastable) = loop [] rargs
-		where
-		loop buf [] = (reverse buf, [])
-		loop buf (x : xs) = case treeToMaybeNum x of
-			Nothing -> (reverse buf, (x : xs))
-			Just n -> loop (n : buf) xs
+	numCastedRargs :: [Either Tree Number]
+	numCastedRargs = map numcast rargs
+	numcast :: Tree -> Either Tree Number
+	numcast t = case treeToMaybeNum t of
+		Just x -> Right x
+		Nothing -> Left t
 
 	withOp :: (Number -> Number -> Number) -> Number -> Tree
-	withOp op defaul = numToTree $ foldl op defaul numCasted
+	withOp op defaul = case withOpOnMaybeNums numCastedRargs op defaul of
+		[] -> numToTree defaul
+		[x] -> x
+		(x : xs) -> (Branch x xs)
+
+	withOpOnMaybeNums :: [Either Tree Number] -> (Number -> Number -> Number) -> Number -> [Tree]
+	withOpOnMaybeNums mnums op defaul = loop Nothing mnums
+		where
+		loop :: Maybe Number -> [Either Tree Number] -> [Tree]
+		loop macc [] = case macc of
+			Nothing -> []
+			Just acc -> [numToTree acc]
+		loop macc (x : xs) =
+			case x of
+				Right num ->
+					let newacc = case macc of
+						Just acc -> op acc num
+						Nothing -> op defaul num
+					in loop (Just newacc) xs
+				Left t -> right
+					where
+					treeLeft = Leaf (stringifyBuiltin rule)
+					treeArgs = t : withOpOnMaybeNums xs op defaul
+					allArgs = case macc of
+						Nothing -> treeArgs
+						Just acc -> (numToTree acc) : treeArgs
+					right = [Branch treeLeft allArgs]
+
 
 data PatternReplacePart
 	= RVar Symbol
@@ -167,24 +188,18 @@ matchAndReplace pattern t = case pattern of
 	(SimplifyPatternRule match replace conds) ->
 		case matchGetDict match t of
 			Nothing -> Nothing
-			Just dict -> replaceWithDict dict replace
+			Just dict -> Just (replaceWithDict dict replace)
 
-replaceWithDict :: BindingDict -> PatternReplacePart -> Maybe Tree
+replaceWithDict :: BindingDict -> PatternReplacePart -> Tree
 replaceWithDict dict replace = case replace of
 	(RVar token) ->
 		case bindingGet dict token of
-			Just t -> Just t
-			Nothing -> Just (Leaf token)
+			Just t -> t
+			Nothing -> (Leaf token)
 	(RBuiltin builtin args) ->
 		builtinReplace builtin args dict
-	(RGroup x xs) -> case replaceWithDict dict x of
-		Nothing -> Nothing
-		Just rx -> if any isNothing mrxs
-			then Nothing
-			else Just (Branch rx rxs)
-		where
-		mrxs = map (replaceWithDict dict) xs
-		rxs = map fromJust mrxs
+	(RGroup x xs) ->
+		(Branch (replaceWithDict dict x) (map (replaceWithDict dict) xs))
 
 matchGetDict :: PatternMatchPart -> Tree -> Maybe BindingDict
 matchGetDict match t = matchWithDict emptyDict match t
