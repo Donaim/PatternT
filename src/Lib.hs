@@ -88,8 +88,65 @@ data PatternMatchPart
 	| MatchGroup PatternMatchPart [PatternMatchPart]
 	deriving (Eq, Show, Read)
 
+type Number = Double
+
+numToTree :: Number -> Tree
+numToTree x = Leaf (showNoZeroes x)
+
+treeToMaybeNum :: Tree -> Maybe Number
+treeToMaybeNum t = case t of
+	(Leaf s) -> case readMaybe s :: Maybe Number of
+		Just x -> Just x
+		Nothing -> Nothing
+	(Branch {}) -> Nothing
+
+data BuiltinRule
+	= BuiltinAdd
+	| BuiltinMultiply
+	deriving (Eq, Show, Read)
+
+builtinReplace :: BuiltinRule -> [PatternReplacePart] -> BindingDict -> Tree
+builtinReplace rule args dict = case rule of
+	BuiltinAdd -> withOp (+) 0
+	BuiltinMultiply -> withOp (*) 1
+
+	where
+	rargs :: [Tree]
+	rargs = map (replaceWithDict dict) args
+
+	numCastedRargs :: [Either Tree Number]
+	numCastedRargs = map numcast rargs
+	numcast :: Tree -> Either Tree Number
+	numcast t = case treeToMaybeNum t of
+		Just x -> Right x
+		Nothing -> Left t
+
+	withOp :: (Number -> Number -> Number) -> Number -> Tree
+	withOp op defaul = case withOpOnMaybeNums numCastedRargs op defaul of
+		[] -> error $ "Empty builtin in context: " ++ show (rule, args, dict)
+		(x : xs) -> (Branch x xs)
+
+	withOpOnMaybeNums :: [Either Tree Number] -> (Number -> Number -> Number) -> Number -> [Tree]
+	withOpOnMaybeNums mnums op defaul = loop Nothing mnums
+		where
+		loop :: Maybe Number -> [Either Tree Number] -> [Tree]
+		loop macc [] = case macc of
+			Nothing -> []
+			Just acc -> [numToTree acc]
+		loop macc (x : xs) =
+			case x of
+				Right num ->
+					let newacc = case macc of
+						Just acc -> op acc num
+						Nothing -> op defaul num
+					in loop (Just newacc) xs
+				Left t -> case macc of
+					Nothing -> t : loop macc xs
+					Just acc -> (numToTree acc) : t : loop macc xs
+
 data PatternReplacePart
 	= RVar Symbol
+	| RBuiltin BuiltinRule [PatternReplacePart]
 	| RGroup PatternReplacePart [PatternReplacePart]
 	deriving (Eq, Show, Read)
 
@@ -127,6 +184,8 @@ replaceWithDict dict replace = case replace of
 		case bindingGet dict token of
 			Just t -> t
 			Nothing -> (Leaf token)
+	(RBuiltin builtin args) ->
+		builtinReplace builtin args dict
 	(RGroup x xs) ->
 		(Branch (replaceWithDict dict x) (map (replaceWithDict dict) xs))
 
@@ -227,8 +286,15 @@ treeToReplacePattern :: Tree -> PatternReplacePart
 treeToReplacePattern t = case t of
 	(Leaf s) ->
 		(RVar s)
-	(Branch x xs) ->
-		(RGroup (treeToReplacePattern x) (map treeToReplacePattern xs))
+	(Branch x xs) -> case x of
+		(Branch {}) -> group
+		(Leaf s) -> case s of
+			"$add" -> (RBuiltin BuiltinAdd args)
+			"$mult" -> (RBuiltin BuiltinMultiply args)
+			(_) -> group
+		where
+		group = (RGroup (treeToReplacePattern x) args)
+		args = (map treeToReplacePattern xs)
 
 applyTree :: (Tree -> Maybe Tree) -> Tree -> (Tree, Int)
 applyTree func t = case t of
@@ -300,8 +366,23 @@ stringifyMatchPart t = case t of
 stringifyReplacePart :: PatternReplacePart -> String
 stringifyReplacePart t = case t of
 	(RVar s) -> s
+	(RBuiltin x xs) -> "(" ++ stringifyBuiltin x ++ concatMap ((' ' :) . stringifyReplacePart) xs ++ ")"
 	(RGroup x xs) -> "(" ++ stringifyReplacePart x ++ concatMap ((' ' :) . stringifyReplacePart) xs ++ ")"
 
 stringifySimplifyPattern :: SimplifyPattern -> String
 stringifySimplifyPattern p = case p of
 	(SimplifyPatternRule match replace) -> stringifyMatchPart match ++ " -> " ++ stringifyReplacePart replace
+
+stringifyBuiltin :: BuiltinRule -> String
+stringifyBuiltin rule = case rule of
+	BuiltinAdd -> "$add"
+	BuiltinMultiply -> "$mult"
+
+-- | Strip all trailing zeroes
+showNoZeroes :: (Show a) => a -> String
+showNoZeroes x = if anydotq then striped else s
+	where
+		s = show x
+		r = reverse s
+		anydotq = any (== '.') s
+		striped = reverse $ (dropWhile (== '.') . dropWhile (== '0')) r
