@@ -141,9 +141,15 @@ builtinReplace rule args dict = case rule of
 						Just acc -> op acc num
 						Nothing -> op defaul num
 					in loop (Just newacc) xs
-				Left t -> case macc of
-					Nothing -> t : loop macc xs
-					Just acc -> (numToTree acc) : t : loop macc xs
+				Left t -> right
+					where
+					treeLeft = Leaf (stringifyBuiltin rule)
+					treeArgs = t : withOpOnMaybeNums xs op defaul
+					allArgs = case macc of
+						Nothing -> treeArgs
+						Just acc -> (numToTree acc) : treeArgs
+					right = [Branch treeLeft allArgs]
+
 
 data PatternReplacePart
 	= RVar Symbol
