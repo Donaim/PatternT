@@ -6,7 +6,6 @@ import Data.Maybe
 import Data.Either
 import Debug.Trace
 import Data.Char
-import Data.List.Split
 
 traceS :: (Show a) => String -> a -> a
 traceS text x = trace (text ++ show x) x
@@ -254,15 +253,28 @@ data ParseMatchError
 	deriving (Eq, Show, Read)
 
 parseMatch :: String -> Either ParseMatchError SimplifyPattern
-parseMatch text = case sp of
-		[matchPart, replacePart] -> do
-			match <- parseMatchPart matchPart
-			replace <- parseReplacePart replacePart
-			return (SimplifyPatternRule match replace [])
-
-		other -> Left (SplitFailed other)
+parseMatch text = do
+		match <- parseMatchPart beforeArrow
+		replace <- parseReplacePart afterArrow
+		return (SimplifyPatternRule match replace [])
 	where
-	sp = splitOn " -> " text
+	(beforeArrow, _, afterArrow) = partitionString "->" text
+
+partitionString :: String -> String -> (String, String, String)
+partitionString break s =
+	if breakIndex < 0
+	then (s, "", "")
+	else (take breakIndex s, break, drop (length break) after)
+
+	where
+	(after, breakIndex) = afterBreak break 0 s
+
+	afterBreak :: String -> Int -> String -> (String, Int)
+	afterBreak break pos [] = ("", -1)
+	afterBreak break pos str =
+		if isPrefixOf break str
+		then (str, pos)
+		else afterBreak break (pos + 1) (tail str)
 
 parseMatchPart :: String -> Either ParseMatchError PatternMatchPart
 parseMatchPart text = case tree of
