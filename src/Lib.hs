@@ -136,8 +136,13 @@ data PatternReplacePart
 	| RGroup PatternReplacePart [PatternReplacePart]
 	deriving (Eq, Show, Read)
 
+data Conditional
+	= EqCond PatternReplacePart PatternReplacePart
+	| NeqCond PatternReplacePart PatternReplacePart
+	deriving (Eq, Show, Read)
+
 data SimplifyPattern
-	= SimplifyPatternRule PatternMatchPart PatternReplacePart
+	= SimplifyPatternRule PatternMatchPart PatternReplacePart [Conditional]
 	deriving (Eq, Show, Read)
 
 type BindingDict = [(String, Tree)]
@@ -159,7 +164,7 @@ bindingConcat a b = a ++ b
 
 matchAndReplace :: SimplifyPattern -> Tree -> Maybe Tree
 matchAndReplace pattern t = case pattern of
-	(SimplifyPatternRule match replace) ->
+	(SimplifyPatternRule match replace conds) ->
 		case matchGetDict match t of
 			Nothing -> Nothing
 			Just dict -> replaceWithDict dict replace
@@ -238,7 +243,7 @@ parseMatch text = case sp of
 		[matchPart, replacePart] -> do
 			match <- parseMatchPart matchPart
 			replace <- parseReplacePart replacePart
-			return (SimplifyPatternRule match replace)
+			return (SimplifyPatternRule match replace [])
 
 		other -> Left (SplitFailed other)
 	where
@@ -361,9 +366,13 @@ stringifyReplacePart t = case t of
 	(RBuiltin x xs) -> "(" ++ stringifyBuiltin x ++ concatMap ((' ' :) . stringifyReplacePart) xs ++ ")"
 	(RGroup x xs) -> "(" ++ stringifyReplacePart x ++ concatMap ((' ' :) . stringifyReplacePart) xs ++ ")"
 
+stringifyCond :: Conditional -> String
+stringifyCond (EqCond a b) = stringifyReplacePart a ++ " == " ++ stringifyReplacePart b
+stringifyCond (NeqCond a b) = stringifyReplacePart a ++ " != " ++ stringifyReplacePart b
+
 stringifySimplifyPattern :: SimplifyPattern -> String
 stringifySimplifyPattern p = case p of
-	(SimplifyPatternRule match replace) -> stringifyMatchPart match ++ " -> " ++ stringifyReplacePart replace
+	(SimplifyPatternRule match replace conds) -> concat $ intersperse " | " $ [stringifyMatchPart match ++ " -> " ++ stringifyReplacePart replace] ++ (map stringifyCond conds)
 
 stringifyBuiltin :: BuiltinRule -> String
 stringifyBuiltin rule = case rule of
