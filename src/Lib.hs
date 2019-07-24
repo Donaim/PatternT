@@ -123,7 +123,7 @@ builtinReplace rule args dict = case rule of
 
 	withOp :: (Number -> Number -> Number) -> Number -> Tree
 	withOp op defaul = case withOpOnMaybeNums numCastedRargs op defaul of
-		[] -> error $ "Empty builtin in context: " ++ show (rule, args, dict)
+		[] -> numToTree defaul
 		[x] -> x
 		(x : xs) -> (Branch x xs)
 
