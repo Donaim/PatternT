@@ -61,9 +61,16 @@ coms = [
 	(
 		[ "#a + #b -> $add a b"
 		, "#a * #b -> $mult a b"
+
+		, "w + #a -> a + w                | w !> #k"
+		, "w * #a -> a * w                | w !> #k"
+		, "#a + (#b + w) -> (a + b) + w"              -- associative+
+		, "#a * (#b * w) -> (a * b) * w"              -- associative*
+		, "#c * (x + y) -> (c * x) + (c * y)"         -- distributive
 		]
 	,
 		[ ("1 + (2 + 3)",                                      "6")
+		, ("(((1 + (2 + (3 * kek)  )) + 5) * (  2 + 3)) + 2",  "(42 + (15 * kek))")
 		]
 	)]
 
