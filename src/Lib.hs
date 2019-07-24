@@ -82,9 +82,14 @@ data ParseError
 	| ChildrenErrors [Expr] [ParseError]
 	deriving (Eq, Show, Read)
 
+data BuiltinMatchEnum
+	= BuiltinMatchNumber Symbol
+	deriving (Eq, Show, Read)
+
 data PatternMatchPart
 	= Variable Symbol
 	| NameMatch Symbol
+	| BuiltinMatch BuiltinMatchEnum
 	| MatchGroup PatternMatchPart [PatternMatchPart]
 	deriving (Eq, Show, Read)
 
@@ -222,13 +227,7 @@ matchWithDict dict match t = case t of
 		matchWithDict dict match singletonX -- Make sure that (x) = x, ((x)) = x
 	(_) -> case match of
 		(Variable bindName) ->
-			case bindingGet dict bindName of
-				Nothing ->
-					Just (bindingAdd dict bindName t)
-				Just value ->
-					if t == value
-					then Just (bindingAdd dict bindName t)
-					else Nothing
+			matchVariable dict bindName t
 
 		(NameMatch bindName) ->
 			case t of
@@ -239,6 +238,9 @@ matchWithDict dict match t = case t of
 				(Branch {}) -> -- This is not a singleton branch, so we dont ever match it
 					Nothing
 
+		(BuiltinMatch m) ->
+			matchBuiltinWithDict dict m t
+
 		(MatchGroup p []) ->
 			matchWithDict dict p t
 		(MatchGroup p ps) ->
@@ -247,6 +249,21 @@ matchWithDict dict match t = case t of
 					matchGroups dict (p : ps) (x : xs) >>= (return . bindingConcat dict)
 				(Leaf x) ->
 					Nothing
+
+matchVariable :: BindingDict -> Symbol -> Tree -> Maybe BindingDict
+matchVariable dict bindName t =
+	case bindingGet dict bindName of
+		Nothing ->
+			Just (bindingAdd dict bindName t)
+		Just value ->
+			if t == value
+			then Just (bindingAdd dict bindName t)
+			else Nothing
+
+matchBuiltinWithDict :: BindingDict -> BuiltinMatchEnum -> Tree -> Maybe BindingDict
+matchBuiltinWithDict dict match t = case match of
+	(BuiltinMatchNumber bindName) ->
+		treeToMaybeNum t >> matchVariable dict bindName t
 
 matchGroups :: BindingDict -> [PatternMatchPart] -> [Tree] -> Maybe BindingDict
 matchGroups dict [] [] = Just dict
@@ -344,7 +361,9 @@ treeToMatchPattern t = case t of
 		case s of
 			(x : xs) ->
 				if isDigit x || (not (isAlpha x))
-				then NameMatch s
+				then if x == '#'
+					then BuiltinMatch $ BuiltinMatchNumber xs
+					else NameMatch s
 				else if null xs
 					then Variable s
 					else NameMatch s
@@ -448,7 +467,12 @@ stringifyMatchPart :: PatternMatchPart -> String
 stringifyMatchPart t = case t of
 	(Variable s) -> s
 	(NameMatch name) -> name
+	(BuiltinMatch m) -> stringifyBuiltinMatch m
 	(MatchGroup x xs) -> "(" ++ stringifyMatchPart x ++ concatMap ((' ' :) . stringifyMatchPart) xs ++ ")"
+
+stringifyBuiltinMatch :: BuiltinMatchEnum -> String
+stringifyBuiltinMatch m = case m of
+	(BuiltinMatchNumber symbol) -> '#' : symbol
 
 stringifyReplacePart :: PatternReplacePart -> String
 stringifyReplacePart t = case t of
