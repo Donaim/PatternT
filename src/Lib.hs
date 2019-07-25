@@ -291,7 +291,7 @@ matchGroups dict ps [] = Nothing -- Size should be equal
 matchGroups dict (p : ps) (t : ts) = case p of
 	(VaradicMatch bindName) ->
 		case maybeFollowingNameMatch of
-			Nothing -> Just $ bindingAdd dict bindName (t : ts)
+			Nothing -> Just $ bindingAdd dict bindName (t : ts) ++ followingVaradictMatches
 
 			Just nameMatch ->
 				let (varadicMatched, rest) = varadicUntilName nameMatch [] (t : ts)
@@ -305,6 +305,13 @@ matchGroups dict (p : ps) (t : ts) = case p of
 			Just retDict ->
 				let newDict = bindingConcat dict retDict
 				in matchGroups newDict ps ts
+
+		followingVaradictMatches = loop ps -- NOTE: these did not match anything
+			where
+			loop [] = []
+			loop (x : xs) = case x of
+				(VaradicMatch bindName) -> (bindName, []) : loop xs
+				(_) -> loop xs
 
 		maybeFollowingNameMatch =
 			case filter isNameMatch ps of
