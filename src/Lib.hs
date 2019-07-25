@@ -157,7 +157,7 @@ builtinReplace rule args dict = case rule of
 data PatternReplacePart
 	= RVar Symbol
 	| RBuiltin BuiltinRule [PatternReplacePart]
-	| RGroup PatternReplacePart [PatternReplacePart]
+	| RGroup [PatternReplacePart]
 	deriving (Eq, Show, Read)
 
 data Conditional
@@ -216,8 +216,8 @@ replaceWithDict dict replace = case replace of
 			Nothing -> (Leaf token)
 	(RBuiltin builtin args) ->
 		builtinReplace builtin args dict
-	(RGroup x xs) ->
-		(Branch $ (replaceWithDict dict x) : (map (replaceWithDict dict) xs))
+	(RGroup xs) ->
+		(Branch (map (replaceWithDict dict) xs))
 
 matchGetDict :: PatternMatchPart -> Tree -> Maybe BindingDict
 matchGetDict match t = matchWithDict emptyDict match t
@@ -442,7 +442,7 @@ treeToReplacePattern t = case t of
 		(RVar s)
 
 	(Branch []) ->
-		(RVar "()") -- FIXME: return error instead
+		(RGroup [])
 	(Branch (x : xs)) -> case x of
 		(Branch {}) -> group
 		(Leaf s) -> case s of
@@ -450,7 +450,7 @@ treeToReplacePattern t = case t of
 			"$mult" -> (RBuiltin BuiltinMultiply args)
 			(_) -> group
 		where
-		group = (RGroup (treeToReplacePattern x) args)
+		group = (RGroup ((treeToReplacePattern x) : args))
 		args = (map treeToReplacePattern xs)
 
 applyTreeOne :: (Tree -> Maybe Tree) -> Tree -> Maybe Tree
@@ -527,7 +527,8 @@ stringifyReplacePart :: PatternReplacePart -> String
 stringifyReplacePart t = case t of
 	(RVar s) -> s
 	(RBuiltin x xs) -> "(" ++ stringifyBuiltin x ++ concatMap ((' ' :) . stringifyReplacePart) xs ++ ")"
-	(RGroup x xs) -> "(" ++ stringifyReplacePart x ++ concatMap ((' ' :) . stringifyReplacePart) xs ++ ")"
+	(RGroup []) -> "()"
+	(RGroup (x : xs)) -> "(" ++ stringifyReplacePart x ++ concatMap ((' ' :) . stringifyReplacePart) xs ++ ")"
 
 stringifyCond :: Conditional -> String
 stringifyCond (EqCond a b) = stringifyReplacePart a ++ " == " ++ stringifyReplacePart b
