@@ -11,12 +11,16 @@ coms = [
 		[ "a ((+)) a -> ((a))"
 		, "a + b -> b"
 		, "vanish a ->"
+		, "({ys} % {zs}) % x -> x % ({ys} % {zs})"
 		]
 	,
 		[ ("x + (((x + x)))",                                  "x")
 		, ("(((y)) ((+)) x) + y",                              "y")
 		, ("(y + x) * y",                                      "(x * y)")
 		, ("(z (x (vanish (a + b)))",                          "(z x)")
+		, ("(a % b) % c",                                      "(c % (a % b))")
+		, ("(a z % b) % c",                                    "(c % (a z % b))")
+		, ("(% b) % c",                                        "(c % (% b))")
 		]
 	),
 	(
@@ -50,7 +54,6 @@ coms = [
 		, "not (not a) -> a"
 		, "not 0 -> 1"
 		, "not 1 -> 0"
-		, "({ys} or {zs}) or x -> x or ({ys} or {zs})"
 		]
 	,
 		[ ("x or x",                                           "x")
@@ -60,9 +63,6 @@ coms = [
 		, ("(0 and x) and x",                                  "0")
 		, ("not ((0 and x) and x)",                            "1")
 		, ("(not ((0 and x) and x)) and x",                    "x")
-		, ("(a or b) or c",                                    "(c or (a or b))")
-		, ("(a z or b) or c",                                  "(c or (a z or b))")
-		, ("(or b) or c",                                      "(c or (or b))")
 		]
 	),
 	(
