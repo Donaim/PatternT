@@ -86,6 +86,7 @@ coms = [
 		, ("show (fac (succ (succ (succ (succ 0",            "24")
 		-- , ("show (fac (succ (succ (succ (succ (succ 0",      "120")
 		-- , ("show (fac (succ (succ (succ (succ (succ (succ 0","720") -- ACTUALLY HALTS XD
+		, ("true skipped (show (fac (succ (succ (succ (succ (succ 0", "skipped") -- LAZY
 		]
 	),
 	(
