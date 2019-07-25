@@ -59,6 +59,36 @@ coms = [
 		]
 	),
 	(
+		[ "id a -> a"
+		, "true a b -> a"
+		, "false a b -> b "
+
+		, "+ 0 b -> b"
+		, "+ (succ k) b -> succ (+ k b)"
+
+		, "* 0 b -> 0"
+		, "* (succ a) b -> + b (* a b)"
+
+		, "fac 0 -> (succ 0)"
+		, "fac (succ x) -> * (succ x) (fac x)"
+
+		, "show 0 -> 0"
+		, "show (succ x) -> $add 1 (show x)"
+
+		-- , "(f x) y -> f x y" -- CARRY
+		, "$add #a #b -> $add a b" -- FIX?
+		]
+	,
+		[ ("id x",                                           "x")
+		, ("true (false a y) a",                             "y")
+		, ("+ (succ (succ 0)) (succ 0)",                     "(succ (succ (succ 0)))")
+		, ("show (+ (succ (succ 0)) (succ 0))",              "3")
+		, ("show (fac (succ (succ (succ (succ 0",            "24")
+		-- , ("show (fac (succ (succ (succ (succ (succ 0",      "120")
+		-- , ("show (fac (succ (succ (succ (succ (succ (succ 0","720") -- ACTUALLY HALTS XD
+		]
+	),
+	(
 		[ "#a + #b -> $add a b"
 		, "#a * #b -> $mult a b"
 
