@@ -56,23 +56,20 @@ tokenize s = reverse exprs
 
 data Tree
 	= Leaf Symbol
-	| Branch Tree [Tree]
+	| Branch [Tree]
 	deriving (Eq, Show, Read)
 
 makeTree :: [Expr] -> Either ParseError Tree
 makeTree exprs = case exprs of
-	[] -> Left EmptyTree
+	[] -> Right $ Branch []
 	[x] -> case x of
 		Atom sym -> Right (Leaf sym)
 		Group g -> makeTree g
-	(x : xs) ->
+	xs ->
 		case bad of
-			[] -> case mytree of
-				Left err -> Left (FuncError exprs err)
-				Right me -> Right (Branch me good)
+			[] -> Right (Branch good)
 			errors -> Left (ChildrenErrors exprs errors)
 		where
-		mytree = makeTree [x]
 		childs = map (\ y -> makeTree [y]) xs
 		(bad, good) = partitionEithers childs
 
@@ -131,7 +128,7 @@ builtinReplace rule args dict = case rule of
 	withOp op defaul = case withOpOnMaybeNums numCastedRargs op defaul of
 		[] -> numToTree defaul
 		[x] -> x
-		(x : xs) -> (Branch x xs)
+		xs -> (Branch xs)
 
 	withOpOnMaybeNums :: [Either Tree Number] -> (Number -> Number -> Number) -> Number -> [Tree]
 	withOpOnMaybeNums mnums op defaul = loop Nothing mnums
@@ -154,7 +151,7 @@ builtinReplace rule args dict = case rule of
 					allArgs = case macc of
 						Nothing -> treeArgs
 						Just acc -> (numToTree acc) : treeArgs
-					right = [Branch treeLeft allArgs]
+					right = [Branch (treeLeft : allArgs)]
 
 
 data PatternReplacePart
@@ -220,15 +217,17 @@ replaceWithDict dict replace = case replace of
 	(RBuiltin builtin args) ->
 		builtinReplace builtin args dict
 	(RGroup x xs) ->
-		(Branch (replaceWithDict dict x) (map (replaceWithDict dict) xs))
+		(Branch $ (replaceWithDict dict x) : (map (replaceWithDict dict) xs))
 
 matchGetDict :: PatternMatchPart -> Tree -> Maybe BindingDict
 matchGetDict match t = matchWithDict emptyDict match t
 
 matchWithDict :: BindingDict -> PatternMatchPart -> Tree -> Maybe BindingDict
 matchWithDict dict match t = case t of
-	(Branch singletonX []) ->
-		matchWithDict dict match singletonX -- Make sure that (x) = x, ((x)) = x
+	(Branch []) ->
+		Nothing
+	(Branch [x]) ->
+		matchWithDict dict match x -- Make sure that (x) = x, ((x)) = x
 	(_) -> case match of
 		(Variable bindName) ->
 			matchVariable dict bindName t
@@ -252,8 +251,8 @@ matchWithDict dict match t = case t of
 			matchWithDict dict p t
 		(MatchGroup p ps) ->
 			case t of
-				(Branch x xs) ->
-					matchGroups dict (p : ps) (x : xs) >>= (return . bindingConcat dict)
+				(Branch xs) ->
+					matchGroups dict (p : ps) xs >>= (return . bindingConcat dict)
 				(Leaf x) ->
 					Nothing
 
@@ -280,15 +279,15 @@ matchGroups dict (p : ps) (t : ts) = case p of
 	(VaradicMatch bindName) ->
 		case maybeFollowingNameMatch of
 			Nothing ->
-				let val = (Branch t ts)
+				let val = (Branch (t : ts))
 				in Just $ bindingAdd dict bindName val
 
 			Just nameMatch ->
 				let (varadicMatched, rest) = varadicUntilName nameMatch [] (t : ts)
 				in case varadicMatched of
 					[] -> notVaradic
-					(x : xs) ->
-						let val = (Branch x xs)
+					xs ->
+						let val = (Branch xs)
 						in let newDict = bindingAdd dict bindName val
 						in matchGroups newDict ps rest
 
@@ -424,8 +423,10 @@ treeToMatchPattern t = case t of
 				else NameMatch s
 			(_) ->
 				NameMatch s
-	(Branch x xs) ->
-		(MatchGroup (treeToMatchPattern x) (map treeToMatchPattern xs))
+	(Branch childs) ->
+		case childs of
+			[] -> NameMatch "()" -- FIXME: return error
+			(x : xs) -> (MatchGroup (treeToMatchPattern x) (map treeToMatchPattern xs))
 
 parseReplacePart :: String -> Either ParseMatchError PatternReplacePart
 parseReplacePart text = case tree of
@@ -439,7 +440,10 @@ treeToReplacePattern :: Tree -> PatternReplacePart
 treeToReplacePattern t = case t of
 	(Leaf s) ->
 		(RVar s)
-	(Branch x xs) -> case x of
+
+	(Branch []) ->
+		(RVar "()") -- FIXME: return error instead
+	(Branch (x : xs)) -> case x of
 		(Branch {}) -> group
 		(Leaf s) -> case s of
 			"$add" -> (RBuiltin BuiltinAdd args)
@@ -454,29 +458,27 @@ applyTree func t = case t of
 	(Leaf s) -> case func t of
 		Just newt -> (newt, 1)
 		Nothing -> (t, 0)
-	(Branch x xs) -> case func t' of
-		Just newt -> (newt, 1 + xcount + xscount)
-		Nothing -> (t', 0 + xcount + xscount)
+	(Branch childs) -> case func t' of
+		Just newt -> (newt, 1 + xscount)
+		Nothing -> (t', 0 + xscount)
 		where
-		(newx, xcount) = applyTree func x
-		zipped  = map (applyTree func) xs
+		zipped  = map (applyTree func) childs
 		newxs   = map fst zipped
 		xscount = sum (map snd zipped)
-		t' = Branch newx newxs
+		t' = Branch newxs
 
 applyTreeOne :: (Tree -> Maybe Tree) -> Tree -> Maybe Tree
 applyTreeOne func t = case t of
 	(Leaf s) -> func t
-	(Branch x xs) -> case applyTreeOne func x of
-			Just newx -> Just (Branch newx xs)
-			Nothing -> case loop [] xs of
+	(Branch childs) ->
+			case loop [] childs of
 				Just newme -> Just newme
 				Nothing -> func t
 		where
 		loop :: [Tree] -> [Tree] -> Maybe Tree
 		loop previus [] = Nothing
 		loop previus (c : cs) = case applyTreeOne func c of
-			Just newc -> Just (Branch x (previus ++ [newc] ++ cs))
+			Just newc -> Just (Branch (previus ++ [newc] ++ cs))
 			Nothing -> loop (previus ++ [c]) cs
 
 applySimplifications :: [SimplifyPattern] -> Tree -> [Tree]
@@ -517,7 +519,8 @@ applySimplificationsUntil0 patterns0 t0 = t0 : loop patterns0 t0
 stringifyTree :: Tree -> String
 stringifyTree t = case t of
 	(Leaf s) -> s
-	(Branch x xs) -> "(" ++ stringifyTree x ++ concatMap ((' ' :) . stringifyTree) xs ++ ")"
+	(Branch []) -> "()"
+	(Branch (x : xs)) -> "(" ++ stringifyTree x ++ concatMap ((' ' :) . stringifyTree) xs ++ ")"
 
 stringifyMatchPart :: PatternMatchPart -> String
 stringifyMatchPart t = case t of
