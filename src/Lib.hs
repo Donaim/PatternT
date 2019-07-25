@@ -223,12 +223,8 @@ matchGetDict :: PatternMatchPart -> Tree -> Maybe BindingDict
 matchGetDict match t = matchWithDict emptyDict match t
 
 matchWithDict :: BindingDict -> PatternMatchPart -> Tree -> Maybe BindingDict
-matchWithDict dict match t = case t of
-	(Branch []) ->
-		Nothing
-	(Branch [x]) ->
-		matchWithDict dict match x -- Make sure that (x) = x, ((x)) = x
-	(_) -> case match of
+matchWithDict dict match t =
+	case match of
 		(Variable bindName) ->
 			matchVariable dict bindName t
 
@@ -247,8 +243,6 @@ matchWithDict dict match t = case t of
 		(BuiltinMatch m) ->
 			matchBuiltinWithDict dict m t
 
-		(MatchGroup p []) ->
-			matchWithDict dict p t
 		(MatchGroup p ps) ->
 			case t of
 				(Branch xs) ->
@@ -467,6 +461,7 @@ applyTreeOne func t = case t of
 			Just newc -> Just $
 				case newc of
 					(Branch []) -> (Branch (previus ++ cs)) -- NOTE: erasing empty leafs!
+					(Branch [x]) -> (Branch (previus ++ [x] ++ cs)) -- NOTE: erasing singletons! NOTE: the top level tree can still be a singleton, but that's ok since we will match its children anyway
 					(_) -> (Branch (previus ++ [newc] ++ cs))
 			Nothing -> loop (previus ++ [c]) cs
 

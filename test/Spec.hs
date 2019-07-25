@@ -8,15 +8,15 @@ import Control.Monad
 coms :: [([String], [(String, String)])]
 coms = [
 	(
-		[ "a + a -> a"
+		[ "a ((+)) a -> ((a))"
 		, "a + b -> b"
 		, "vanish a ->"
 		]
 	,
-		[ ("x + (x + x)",                                      "x")
-		, ("(y + x) + y",                                      "y")
+		[ ("x + (((x + x)))",                                  "x")
+		, ("(((y)) ((+)) x) + y",                              "y")
 		, ("(y + x) * y",                                      "(x * y)")
-		, ("(x % (vanish (a + b))",                            "(x %)")
+		, ("(z (x (vanish (a + b)))",                          "(z x)")
 		]
 	),
 	(
