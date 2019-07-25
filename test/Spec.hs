@@ -12,8 +12,7 @@ coms = [
 		, "a + b -> b"
 		, "vanish a ->"
 		, "({ys} % {zs}) % x -> x % ({ys} % {zs})"
-		, "(z {ys}) / x -> x"
-		-- , "({ys}) / x -> x" -- FAILING CASE (because during parsing all singletons are lost)
+		, "({ys}) / x -> x"
 		]
 	,
 		[ ("x + (((x + x)))",                                  "x")

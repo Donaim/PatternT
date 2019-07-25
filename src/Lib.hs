@@ -73,6 +73,11 @@ makeTree exprs = case exprs of
 		childs = map (\ y -> makeTree [y]) xs
 		(bad, good) = partitionEithers childs
 
+makeTreeWithSingletons :: Expr -> Tree
+makeTreeWithSingletons expr = case expr of
+	Atom sym -> Leaf sym
+	Group g -> Branch $ map makeTreeWithSingletons g
+
 data ParseError
 	= EmptyTree
 	| FuncError [Expr] ParseError
@@ -339,6 +344,8 @@ data ParseMatchError
 	= Unknown String
 	| SplitFailed [String]
 	| CondExpected String
+	| ExpectedClosingBracket String
+	| MatchEmptyTreeError
 	| MakeTreeError ParseError
 	deriving (Eq, Show, Read)
 
@@ -414,33 +421,43 @@ partitionString break s =
 		else afterBreak break (pos + 1) (tail str)
 
 parseMatchPart :: String -> Either ParseMatchError PatternMatchPart
-parseMatchPart text = case tree of
-		Right t -> Right (treeToMatchPattern t)
-		Left e -> Left (MakeTreeError e)
+parseMatchPart text = treeToMatchPattern tree
 	where
 	tokens = tokenize text
-	tree = makeTree tokens
+	tree = makeTreeWithSingletons (Group tokens)
 
-treeToMatchPattern :: Tree -> PatternMatchPart
+treeToMatchPattern :: Tree -> Either ParseMatchError PatternMatchPart
 treeToMatchPattern t = case t of
 	(Leaf s) ->
 		case s of
-			[x] ->
+			[x] -> Right $
 				if isDigit x || (not (isAlpha x))
 				then NameMatch s
 				else Variable s
-			('#' : xs) ->
+			('#' : xs) -> Right $
 				BuiltinMatch $ BuiltinMatchNumber xs
 			('{' : xs) ->
 				if last xs == '}' -- ASSUMPTION: we know that xs is not empty because previus match would fire
-				then VaradicMatch s -- NOTE: variable name is actually like "{x}", not just "x"
-				else NameMatch s
+				then Right $ VaradicMatch s -- NOTE: variable name is actually like "{x}", not just "x"
+				else Left $ ExpectedClosingBracket s
 			(_) ->
-				NameMatch s
+				Right $ NameMatch s
 	(Branch childs) ->
 		case childs of
-			[] -> NameMatch "()" -- FIXME: return error
-			(x : xs) -> (MatchGroup (treeToMatchPattern x) (map treeToMatchPattern xs))
+			[] -> Left MatchEmptyTreeError
+			(x : xs) -> do
+				unless (null badChildren) (Left $ head badChildren)
+				return (unsingleton (MatchGroup (head goodChildren) (tail goodChildren)))
+				where
+				parsedChildren = map treeToMatchPattern childs
+				(badChildren, goodChildren) = partitionEithers parsedChildren
+
+				unsingleton child = case child of
+					(MatchGroup x []) -> case x of
+						(VaradicMatch {}) -> child
+						(_) -> x
+					(_) -> child
+
 
 parseReplacePart :: String -> Either ParseMatchError PatternReplacePart
 parseReplacePart text = case tree of
