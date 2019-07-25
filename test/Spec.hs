@@ -12,6 +12,8 @@ coms = [
 		, "a + b -> b"
 		, "vanish a ->"
 		, "({ys} % {zs}) % x -> x % ({ys} % {zs})"
+		, "(z {ys}) / x -> x"
+		-- , "({ys}) / x -> x" -- FAILING CASE (because during parsing all singletons are lost)
 		]
 	,
 		[ ("x + (((x + x)))",                                  "x")
@@ -21,6 +23,10 @@ coms = [
 		, ("(a % b) % c",                                      "(c % (a % b))")
 		, ("(a z % b) % c",                                    "(c % (a z % b))")
 		, ("(% b) % c",                                        "(c % (% b))")
+		, ("(a b c) / d",                                      "d")
+		, ("(a) / d",                                          "(a / d)")
+		, ("() / d",                                           "(() / d)")
+		, ("e / d",                                            "(e / d)")
 		]
 	),
 	(
