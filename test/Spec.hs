@@ -48,6 +48,7 @@ coms = [
 		, "not (not a) -> a"
 		, "not 0 -> 1"
 		, "not 1 -> 0"
+		, "({ys} or y) or x -> x or ({ys} or y)"
 		]
 	,
 		[ ("x or x",                                           "x")
@@ -57,6 +58,7 @@ coms = [
 		, ("(0 and x) and x",                                  "0")
 		, ("not ((0 and x) and x)",                            "1")
 		, ("(not ((0 and x) and x)) and x",                    "x")
+		, ("(a or b) or c",                                    "(c or ((a) or b))")
 		]
 	),
 	(
