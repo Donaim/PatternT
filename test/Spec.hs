@@ -69,6 +69,10 @@ coms = [
 		, "* 0 b -> 0"
 		, "* (succ a) b -> + b (* a b)"
 
+		, "> 0 b -> false"
+		, "> a 0 -> true"
+		, "> (succ a) (succ b) -> > a b"
+
 		, "fac 0 -> (succ 0)"
 		, "fac (succ x) -> * (succ x) (fac x)"
 
@@ -77,6 +81,8 @@ coms = [
 
 		-- , "(f x) y -> f x y" -- CARRY
 		, "$add #a #b -> $add a b" -- FIX?
+
+		, "inf -> succ inf" -- careful
 		]
 	,
 		[ ("id x",                                           "x")
@@ -87,6 +93,9 @@ coms = [
 		-- , ("show (fac (succ (succ (succ (succ (succ 0",      "120")
 		-- , ("show (fac (succ (succ (succ (succ (succ (succ 0","720") -- ACTUALLY HALTS XD
 		, ("true skipped (show (fac (succ (succ (succ (succ (succ 0", "skipped") -- LAZY
+		, ("> (succ 0) (succ (succ 0))",                     "false")
+		, ("> inf (succ (succ 0))",                          "true")
+		, ("> (succ (succ 0)) inf",                          "false")
 		]
 	),
 	(
