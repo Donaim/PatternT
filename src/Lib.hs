@@ -295,11 +295,8 @@ matchGroups dict (p : ps) (t : ts) = case p of
 
 			Just nameMatch ->
 				let (varadicMatched, rest) = varadicUntilName nameMatch [] (t : ts)
-				in case varadicMatched of
-					[] -> notVaradic
-					xs ->
-						let newDict = bindingAdd dict bindName xs
-						in matchGroups newDict ps rest
+				in let newDict = bindingAdd dict bindName varadicMatched
+					in matchGroups newDict ps rest
 
 	(_) -> notVaradic
 	where
