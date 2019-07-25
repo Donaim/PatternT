@@ -170,18 +170,18 @@ data SimplifyPattern
 	= SimplifyPatternRule PatternMatchPart PatternReplacePart [Conditional]
 	deriving (Eq, Show, Read)
 
-type BindingDict = [(String, Tree)]
+type BindingDict = [(String, [Tree])]
 
 emptyDict :: BindingDict
 emptyDict = []
 
-bindingGet :: BindingDict -> String -> Maybe Tree
+bindingGet :: BindingDict -> String -> Maybe [Tree]
 bindingGet dict key =
 	case find ((== key) . fst) dict of
 		Nothing -> Nothing
 		Just (k, v) -> Just v
 
-bindingAdd :: BindingDict -> String -> Tree -> BindingDict
+bindingAdd :: BindingDict -> String -> [Tree] -> BindingDict
 bindingAdd dict key value = (key, value) : dict
 
 bindingConcat :: BindingDict -> BindingDict -> BindingDict
@@ -212,12 +212,31 @@ replaceWithDict :: BindingDict -> PatternReplacePart -> Tree
 replaceWithDict dict replace = case replace of
 	(RVar token) ->
 		case bindingGet dict token of
-			Just t -> t
+			Just t -> case t of
+				[x] -> x
+				xs -> Branch xs
 			Nothing -> (Leaf token)
 	(RBuiltin builtin args) ->
-		builtinReplace builtin args dict
+		replaceBuiltin builtin args
 	(RGroup xs) ->
-		(Branch (map (replaceWithDict dict) xs))
+		replaceRgroup xs
+	where
+	replaceBuiltin builtin args = builtinReplace builtin args dict
+
+	replaceRgroup xs = Branch (loop xs)
+		where
+		loop [] = []
+		loop (r : rs) =
+			case r of
+				(RVar token) ->
+					case bindingGet dict token of
+						Just t -> case t of
+							[x] -> x : loop rs
+							xs -> xs ++ loop rs -- Flattening the varargs
+						Nothing -> (Leaf token) : loop rs
+
+				(RBuiltin builtin args) -> replaceBuiltin builtin args : loop rs
+				(RGroup childs) -> replaceRgroup childs : loop rs
 
 matchGetDict :: PatternMatchPart -> Tree -> Maybe BindingDict
 matchGetDict match t = matchWithDict emptyDict match t
@@ -232,7 +251,7 @@ matchWithDict dict match t =
 			case t of
 				(Leaf symName) ->
 					if bindName == symName
-					then Just (bindingAdd dict bindName t)
+					then Just (bindingAdd dict bindName [t])
 					else Nothing -- Names don't match
 				(Branch {}) -> -- This is not a singleton branch, so we dont ever match it
 					Nothing
@@ -253,12 +272,12 @@ matchWithDict dict match t =
 matchVariable :: BindingDict -> Symbol -> Tree -> Maybe BindingDict
 matchVariable dict bindName t =
 	case bindingGet dict bindName of
-		Nothing ->
-			Just (bindingAdd dict bindName t)
-		Just value ->
+		Just [value] ->
 			if t == value
-			then Just (bindingAdd dict bindName t)
+			then Just (bindingAdd dict bindName [t])
 			else Nothing
+		(_) ->
+			Just (bindingAdd dict bindName [t])
 
 matchBuiltinWithDict :: BindingDict -> BuiltinMatchEnum -> Tree -> Maybe BindingDict
 matchBuiltinWithDict dict match t = case match of
@@ -272,17 +291,14 @@ matchGroups dict ps [] = Nothing -- Size should be equal
 matchGroups dict (p : ps) (t : ts) = case p of
 	(VaradicMatch bindName) ->
 		case maybeFollowingNameMatch of
-			Nothing ->
-				let val = (Branch (t : ts))
-				in Just $ bindingAdd dict bindName val
+			Nothing -> Just $ bindingAdd dict bindName (t : ts)
 
 			Just nameMatch ->
 				let (varadicMatched, rest) = varadicUntilName nameMatch [] (t : ts)
 				in case varadicMatched of
 					[] -> notVaradic
 					xs ->
-						let val = (Branch xs)
-						in let newDict = bindingAdd dict bindName val
+						let newDict = bindingAdd dict bindName xs
 						in matchGroups newDict ps rest
 
 	(_) -> notVaradic

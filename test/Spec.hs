@@ -60,7 +60,8 @@ coms = [
 		, ("(0 and x) and x",                                  "0")
 		, ("not ((0 and x) and x)",                            "1")
 		, ("(not ((0 and x) and x)) and x",                    "x")
-		, ("(a or b) or c",                                    "(c or ((a) or b))")
+		, ("(a or b) or c",                                    "(c or (a or b))")
+		, ("(a z or b) or c",                                    "(c or (a z or b))")
 		]
 	),
 	(
