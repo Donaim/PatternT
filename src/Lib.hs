@@ -62,7 +62,7 @@ data Tree
 makeTree :: [Expr] -> Either ParseError Tree
 makeTree exprs = case exprs of
 	[] -> Right $ Branch []
-	[x] -> case x of
+	[x] -> case x of -- NOTE: tree will not have singleton lists
 		Atom sym -> Right (Leaf sym)
 		Group g -> makeTree g
 	xs ->
