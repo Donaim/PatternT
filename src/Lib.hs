@@ -89,6 +89,7 @@ data BuiltinMatchEnum
 data PatternMatchPart
 	= Variable Symbol
 	| NameMatch Symbol
+	| VaradicMatch Symbol
 	| BuiltinMatch BuiltinMatchEnum
 	| MatchGroup PatternMatchPart [PatternMatchPart]
 	deriving (Eq, Show, Read)
@@ -241,6 +242,9 @@ matchWithDict dict match t = case t of
 				(Branch {}) -> -- This is not a singleton branch, so we dont ever match it
 					Nothing
 
+		(VaradicMatch bindName) ->
+			matchVariable dict bindName t
+
 		(BuiltinMatch m) ->
 			matchBuiltinWithDict dict m t
 
@@ -272,12 +276,51 @@ matchGroups :: BindingDict -> [PatternMatchPart] -> [Tree] -> Maybe BindingDict
 matchGroups dict [] [] = Just dict
 matchGroups dict [] ts = Nothing -- Size should be equal
 matchGroups dict ps [] = Nothing -- Size should be equal
-matchGroups dict (p : ps) (t : ts) =
-	case matchWithDict dict p t of
-		Nothing -> Nothing
-		Just retDict ->
-			let newDict = bindingConcat dict retDict
-			in matchGroups newDict ps ts
+matchGroups dict (p : ps) (t : ts) = case p of
+	(VaradicMatch bindName) ->
+		case maybeFollowingNameMatch of
+			Nothing ->
+				let val = (Branch t ts)
+				in Just $ bindingAdd dict bindName val
+
+			Just nameMatch ->
+				let (varadicMatched, rest) = varadicUntilName nameMatch [] (t : ts)
+				in case varadicMatched of
+					[] -> notVaradic
+					(x : xs) ->
+						let val = (Branch x xs)
+						in let newDict = bindingAdd dict bindName val
+						in matchGroups newDict ps rest
+
+	(_) -> notVaradic
+	where
+		notVaradic = case matchWithDict dict p t of
+			Nothing -> Nothing
+			Just retDict ->
+				let newDict = bindingConcat dict retDict
+				in matchGroups newDict ps ts
+
+		maybeFollowingNameMatch =
+			case filter isNameMatch ps of
+				((NameMatch s) : rest) -> Just s
+				(_) -> Nothing
+
+		isNameMatch x = case x of
+			(NameMatch {}) -> True
+			(_) -> False
+
+		varadicUntilName :: String -> [Tree] -> [Tree] -> ([Tree], [Tree])
+		varadicUntilName nameMatch buf trees =
+			case trees of
+				[] -> break
+				(t : ts) -> case t of
+					(Leaf s) ->
+						if s == nameMatch
+						then break
+						else continue
+					(_) -> continue
+					where continue = varadicUntilName nameMatch (t : buf) ts
+			where break = (reverse buf, trees)
 
 data ParseMatchError
 	= Unknown String
@@ -369,15 +412,18 @@ treeToMatchPattern :: Tree -> PatternMatchPart
 treeToMatchPattern t = case t of
 	(Leaf s) ->
 		case s of
-			(x : xs) ->
+			[x] ->
 				if isDigit x || (not (isAlpha x))
-				then if x == '#'
-					then BuiltinMatch $ BuiltinMatchNumber xs
-					else NameMatch s
-				else if null xs
-					then Variable s
-					else NameMatch s
-			(_) -> Variable s
+				then NameMatch s
+				else Variable s
+			('#' : xs) ->
+				BuiltinMatch $ BuiltinMatchNumber xs
+			('{' : xs) ->
+				if last xs == '}' -- ASSUMPTION: we know that xs is not empty because previus match would fire
+				then VaradicMatch s -- NOTE: variable name is actually like "{x}", not just "x"
+				else NameMatch s
+			(_) ->
+				NameMatch s
 	(Branch x xs) ->
 		(MatchGroup (treeToMatchPattern x) (map treeToMatchPattern xs))
 
@@ -477,6 +523,7 @@ stringifyMatchPart :: PatternMatchPart -> String
 stringifyMatchPart t = case t of
 	(Variable s) -> s
 	(NameMatch name) -> name
+	(VaradicMatch name) -> name
 	(BuiltinMatch m) -> stringifyBuiltinMatch m
 	(MatchGroup x xs) -> "(" ++ stringifyMatchPart x ++ concatMap ((' ' :) . stringifyMatchPart) xs ++ ")"
 
