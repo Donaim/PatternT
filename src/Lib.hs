@@ -464,7 +464,10 @@ applyTreeOne func t = case t of
 		loop :: [Tree] -> [Tree] -> Maybe Tree
 		loop previus [] = Nothing
 		loop previus (c : cs) = case applyTreeOne func c of
-			Just newc -> Just (Branch (previus ++ [newc] ++ cs))
+			Just newc -> Just $
+				case newc of
+					(Branch []) -> (Branch (previus ++ cs)) -- NOTE: erasing empty leafs!
+					(_) -> (Branch (previus ++ [newc] ++ cs))
 			Nothing -> loop (previus ++ [c]) cs
 
 applySimplifications :: [SimplifyPattern] -> Tree -> [Tree]
