@@ -41,6 +41,7 @@ coms = [
 		, "a and a -> a"
 		, "a or (not a) -> 1"
 		, "a and (not a) -> 0"
+		, "1 or x -> 1"
 		, "1 and x -> x"
 		, "0 or x -> x"
 		, "0 and x -> 0"
