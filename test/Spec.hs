@@ -237,20 +237,25 @@ okTreesStr = map (map stringifyTree) okTrees
 -- SIMPLIFIED --
 ----------------
 
+simplified :: [[(Tree, [(Tree, SimplifyPattern)])]]
 simplified = map simpli (zip okRules okTrees)
 
-simpli :: ([SimplifyPattern], [Tree]) -> [[Tree]]
+simpli :: ([SimplifyPattern], [Tree]) -> [(Tree, [(Tree, SimplifyPattern)])]
 simpli (rules, trees) =
-	map (applySimplificationsUntil0 rules) trees
+	map (\ t -> (t, applySimplificationsUntil0Debug rules t)) trees
 
-simpliString :: [[Tree]] -> [[String]]
-simpliString trees = map (map stringifyTree) trees
+simpliString :: [(Tree, [(Tree, SimplifyPattern)])] -> [[(String, String)]]
+simpliString trees = map mapone trees
+	where
+	mapone :: (Tree, [(Tree, SimplifyPattern)]) -> [(String, String)]
+	mapone (tree, simplifications) = (stringifyTree tree, "") :
+		map (\ (t, p) -> (stringifyTree t, stringifySimplifyPattern p)) simplifications
 
-simplifiedStrings :: [[[String]]]
+simplifiedStrings :: [[[(String, String)]]]
 simplifiedStrings = map simpliString simplified
 
 simplifiedStringsLasts :: [[String]]
-simplifiedStringsLasts = map (map last) simplifiedStrings
+simplifiedStringsLasts = map (map (fst . last)) simplifiedStrings
 
 -----------
 -- MATCH --
@@ -288,6 +293,11 @@ equalMatchQ1 (s1, s2) = if s1 == s2 then Nothing else Just (s1, s2)
 -- DISPLAY --
 -------------
 
+padLeft :: Char -> Int -> String -> String
+padLeft c n s = s ++ (replicate toappend c)
+	where
+	toappend = max (n - (length s)) 0
+
 displays :: [String]
 displays = map display (catMaybes notMatches)
 	where
@@ -301,7 +311,8 @@ displays = map display (catMaybes notMatches)
 		where
 		rules = unlines (map ("\t" ++) (okRulesStr !! x))
 		original = ((okTreesStr !! x) !! y)
-		reductions = unlines (map ("\t" ++) ((simplifiedStrings !! x) !! y))
+		reductions = unlines (map showReduction ((simplifiedStrings !! x) !! y))
+		showReduction (tree, rule) = "\t" ++ (padLeft ' ' 80 tree) ++ " [using] " ++ rule
 
 ----------
 -- MAIN --
