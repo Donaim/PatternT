@@ -114,13 +114,14 @@ coms = [
 		[ "#a + #b -> $add a b"
 		, "#a * #b -> $mult a b"
 
+		-- prioritizing
 		, "x + a b {bs} -> x + (a b {bs})"
 		, "a b {bs} + x -> (a b {bs}) + x"
 		, "a * x y {ys} -> a * (x y {ys})"
 		, "x y {ys} * a -> (x y {ys}) * a"
 
-		, "w + #a -> a + w                | w !> #k"
-		, "w * #a -> a * w                | w !> #k"
+		, "w + #a -> a + w                | w !> #k"  -- commutative+
+		, "w * #a -> a * w                | w !> #k"  -- commutative*
 		, "#a + (#b + w) -> (a + b) + w"              -- associative+
 		, "#a * (#b * w) -> (a * b) * w"              -- associative*
 		, "#c * (x + y) -> (c * x) + (c * y)"         -- distributive
@@ -129,7 +130,7 @@ coms = [
 		[ ("1 + 2 + 3",                                        "6")
 		, ("a * b * c",                                        "(a * (b * c))")
 		, ("2 + 2 * 2",                                        "6")
-		, ("(((1 + (2 + (3 * kek)  )) + 5) * (  2 + 3)) + 2",  "(42 + (15 * kek))")
+		, ("(1 + 2 + 3 * kek + 5) * (  2 + 3) + 2",            "(42 + (15 * kek))")
 		]
 	)]
 
