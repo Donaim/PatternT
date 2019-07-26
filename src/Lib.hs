@@ -421,14 +421,14 @@ partitionString break s =
 		else afterBreak break (pos + 1) (tail str)
 
 parseMatchPart :: String -> Either ParseMatchError PatternMatchPart
-parseMatchPart text = treeToMatchPattern tree
+parseMatchPart text = exprToMatchPattern expr
 	where
 	tokens = tokenize text
-	tree = makeTreeWithSingletons (Group tokens)
+	expr = Group tokens
 
-treeToMatchPattern :: Tree -> Either ParseMatchError PatternMatchPart
-treeToMatchPattern t = case t of
-	(Leaf s) ->
+exprToMatchPattern :: Expr -> Either ParseMatchError PatternMatchPart
+exprToMatchPattern t = case t of
+	(Atom s) ->
 		case s of
 			[x] -> Right $
 				if isDigit x || (not (isAlpha x))
@@ -442,14 +442,14 @@ treeToMatchPattern t = case t of
 				else Left $ ExpectedClosingBracket s
 			(_) ->
 				Right $ NameMatch s
-	(Branch childs) ->
+	(Group childs) ->
 		case childs of
 			[] -> Left MatchEmptyTreeError
 			(x : xs) -> do
 				unless (null badChildren) (Left $ head badChildren)
 				return (unsingleton (MatchGroup (head goodChildren) (tail goodChildren)))
 				where
-				parsedChildren = map treeToMatchPattern childs
+				parsedChildren = map exprToMatchPattern childs
 				(badChildren, goodChildren) = partitionEithers parsedChildren
 
 				unsingleton child = case child of
