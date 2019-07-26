@@ -18,8 +18,10 @@ data Expr
 	| Group [Expr]
 	deriving (Eq, Show, Read)
 
-tokenize :: String -> [Expr]
-tokenize s = reverse exprs
+tokenize :: String -> Either ParseError [Expr]
+tokenize s = case rest of
+	[] -> Right $ reverse exprs
+	xs -> Left $ FreeTokensAfterClose xs
 	where
 	(exprs, rest) = tokenize' [] "" s
 
@@ -68,7 +70,7 @@ makeTree exprs = case exprs of
 	xs ->
 		case bad of
 			[] -> Right (Branch good)
-			errors -> Left (ChildrenErrors exprs errors)
+			(e : es) -> Left e
 		where
 		childs = map (\ y -> makeTree [y]) xs
 		(bad, good) = partitionEithers childs
@@ -79,9 +81,7 @@ makeTreeWithSingletons expr = case expr of
 	Group g -> Branch $ map makeTreeWithSingletons g
 
 data ParseError
-	= EmptyTree
-	| FuncError [Expr] ParseError
-	| ChildrenErrors [Expr] [ParseError]
+	= FreeTokensAfterClose String
 	deriving (Eq, Show, Read)
 
 data BuiltinMatchEnum
@@ -346,7 +346,7 @@ data ParseMatchError
 	| CondExpected String
 	| ExpectedClosingBracket String
 	| MatchEmptyTreeError
-	| MakeTreeError ParseError
+	| TokenizeError ParseError
 	deriving (Eq, Show, Read)
 
 maybeHead :: [a] -> Maybe a
@@ -421,10 +421,9 @@ partitionString break s =
 		else afterBreak break (pos + 1) (tail str)
 
 parseMatchPart :: String -> Either ParseMatchError PatternMatchPart
-parseMatchPart text = exprToMatchPattern expr
-	where
-	tokens = tokenize text
-	expr = Group tokens
+parseMatchPart text = case tokenize text of
+		Left e -> Left $ TokenizeError e
+		Right ts -> exprToMatchPattern (Group ts)
 
 exprToMatchPattern :: Expr -> Either ParseMatchError PatternMatchPart
 exprToMatchPattern t = case t of
@@ -460,10 +459,9 @@ exprToMatchPattern t = case t of
 
 
 parseReplacePart :: String -> Either ParseMatchError PatternReplacePart
-parseReplacePart text = Right $ exprToReplacePattern expr
-	where
-	tokens = tokenize text
-	expr = Group tokens
+parseReplacePart text = case tokenize text of
+		Left e -> Left $ TokenizeError e
+		Right ts -> Right $ exprToReplacePattern (Group ts)
 
 exprToReplacePattern :: Expr -> PatternReplacePart
 exprToReplacePattern t = case t of

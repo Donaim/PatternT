@@ -153,8 +153,14 @@ exprs = map (map fst) strs
 corrects :: [[String]]
 corrects = map (map snd) strs
 
+rawTokens :: [[Either ParseError [Expr]]]
+rawTokens = map (map tokenize) exprs
+
+partitionedTokens :: [([ParseError], [[Expr]])]
+partitionedTokens = map partitionEithers rawTokens
+
 treeTokens :: [[[Expr]]]
-treeTokens = map (map tokenize) exprs
+treeTokens = map snd partitionedTokens
 
 trees :: [[Either ParseError Tree]]
 trees = map (map makeTree) treeTokens
