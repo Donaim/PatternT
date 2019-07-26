@@ -172,6 +172,8 @@ data Conditional
 	= EqCond PatternReplacePart PatternReplacePart
 	| NeqCond PatternReplacePart PatternReplacePart
 	| NotmatchCond PatternReplacePart PatternMatchPart
+	| LTCond PatternReplacePart PatternReplacePart
+	| LECond PatternReplacePart PatternReplacePart
 	deriving (Eq, Show, Read)
 
 data SimplifyPattern
@@ -205,6 +207,12 @@ checkCond simplify dict cond = case cond of
 			/= simplify (replaceWithDict dict right)
 	(NotmatchCond left right) ->
 		isNothing $ matchWithDict dict right $ simplify (replaceWithDict dict left)
+	(LTCond left right) ->
+		replaceWithDict dict left
+			< replaceWithDict dict right
+	(LECond left right) ->
+		replaceWithDict dict left
+			<= replaceWithDict dict right
 
 matchAndReplace :: (Tree -> Tree) -> SimplifyPattern -> Tree -> Maybe Tree
 matchAndReplace simplify pattern t = case pattern of
@@ -384,25 +392,36 @@ parseMatch text = do
 			[] -> [beforePipe]
 			(_) -> beforePipe : betweenPipesF afterPipe
 
+eitherAlternative :: [Either a b] -> Either a b -> Either a b
+eitherAlternative [] defaul = defaul
+eitherAlternative (x : xs) defaul = case x of
+	Left e -> eitherAlternative xs defaul
+	Right x -> Right x
 
 parseCond :: String -> Either ParseMatchError Conditional
-parseCond text =
-	case partitionString "!=" text of
-		(left, [], right) -> secondTry
-		(left, neq, right) -> do
-			rleft <- parseReplacePart left
-			rright <- parseReplacePart right
-			return (NeqCond rleft rright)
+parseCond text = eitherAlternative
+	[ eqTry
+	, neqTry
+	, ltTry
+	, leTry
+	]
+	matchTry
 
 	where
-	secondTry = case partitionString "==" text of
-		(left, [], right) -> thirdTry
+	eqTry = tryTwoReplacements "==" EqCond
+	neqTry = tryTwoReplacements "!=" NeqCond
+	ltTry = tryTwoReplacements "<" LTCond
+	leTry = tryTwoReplacements "<=" LECond
+
+	tryTwoReplacements :: String -> (PatternReplacePart -> PatternReplacePart -> Conditional) -> Either ParseMatchError Conditional
+	tryTwoReplacements key constructor = case partitionString key text of
+		(left, [], right) -> Left $ CondExpected text
 		(left, eq, right) -> do
 			rleft <- parseReplacePart left
 			rright <- parseReplacePart right
-			return (EqCond rleft rright)
+			return (constructor rleft rright)
 
-	thirdTry = case partitionString "!>" text of
+	matchTry = case partitionString "!>" text of
 		(left, [], right) -> Left $ CondExpected text
 		(left, eq, right) -> do
 			rleft <- parseReplacePart left
@@ -576,6 +595,8 @@ stringifyCond :: Conditional -> String
 stringifyCond (EqCond a b) = stringifyReplacePart a ++ " == " ++ stringifyReplacePart b
 stringifyCond (NeqCond a b) = stringifyReplacePart a ++ " != " ++ stringifyReplacePart b
 stringifyCond (NotmatchCond a b) = stringifyReplacePart a ++ " !> " ++ stringifyMatchPart b
+stringifyCond (LTCond a b) = stringifyReplacePart a ++ " < " ++ stringifyReplacePart b
+stringifyCond (LECond a b) = stringifyReplacePart a ++ " <= " ++ stringifyReplacePart b
 
 stringifySimplifyPattern :: SimplifyPattern -> String
 stringifySimplifyPattern p = case p of
@@ -617,5 +638,5 @@ instance Ord Tree where
 				(Leaf {}) ->
 					GT -- ASSUMPTION: no singleton branches
 				(Branch ys) ->
-					compare xs ys -- NOTE: the size of branch is the secondary thing, the most important is first element of branch
+					compare (reverse xs) (reverse ys) -- NOTE: the size of branch is the secondary thing, the most important is LAST element of branch
 
