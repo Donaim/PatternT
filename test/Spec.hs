@@ -124,20 +124,26 @@ coms = [
 		, "1 * x -> x"
 		, "0 + x -> x"
 
-		, "w + #a -> a + w                | w !> #k"  -- commutative+
-		, "w * #a -> a * w                | w !> #k"  -- commutative*
-		, "w + (#a + y) -> a + (w + y)    | w !> #k"  -- commutative+2
-		, "w * (#a * y) -> a * (w * y)    | w !> #k"  -- commutative*2
+		-- commutative
+		, "a + b -> b + a | b < a"
+		, "a * b -> b * a | b < a"
+		, "a + (b + c) -> b + (a + c) | b < a"
+		, "a * (b * c) -> b * (a * c) | b < a"
 
+		-- associative
 		, "#a + (#b + w) -> (a + b) + w"              -- associative+
 		, "#a * (#b * w) -> (a * b) * w"              -- associative*
-		, "#c * (x + y) -> (c * x) + (c * y)"         -- distributive
+
+		, "(a + b) + c -> (a + (b + c))"
+		, "(a * b) * c -> (a * (b * c))"
 
 		-- adding symbols with coefficients
 		, "(#a * x) + (#b * x) -> (a + b) * x"
 		, "(#a * x) + ((#b * x) + w) -> (a + b) * x + w"
 		, "x + (#b * x) -> (1 + b) * x"
 		, "x + ((#b * x) + w) -> (1 + b) * x + w"
+
+		, "#c * (x + y) -> (c * x) + (c * y)"         -- distributive
 		]
 	,
 		[ ("1 + 2 + 3",                                        "6")
@@ -161,7 +167,7 @@ coms = [
 		, ("3 * x + 3 + 3 * x + 3 * z",                        "(3 + ((6 * x) + (3 * z)))")
 		, ("3 * (3 * z)",                                      "(9 * z)")
 		, ("3 * ( 2 + 3 * z )",                                "(6 + (9 * z))")
-		-- , ("bcd + ab",                                         "(ab + bcd)") -- FAILING: symbols are opaque, TODO: fix this
+		, ("bcd + ab",                                         "(ab + bcd)")
 		, ("4 * Head + 3",                                     "(3 + (4 * Head))")
 		, ("23Kappa + 3",                                      "(3 + 23Kappa)")
 		-- , ("4Head * 0.5",                                   "2Head") -- FAILING, not going to fix because "4 * Head * 0.5" -> "2 * Head", so thats ok
