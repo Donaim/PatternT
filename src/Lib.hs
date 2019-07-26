@@ -228,9 +228,9 @@ replaceWithDict dict replace = case replace of
 	where
 	replaceBuiltin builtin args = builtinReplace builtin args dict
 
-	replaceRgroup xs = case xs of
-			[x] -> replaceWithDict dict x
-			xs -> Branch (loop xs)
+	replaceRgroup xs = case loop xs of
+			[x] -> x
+			xs -> Branch xs
 		where
 		loop [] = []
 		loop (r : rs) =
