@@ -115,22 +115,65 @@ coms = [
 		, "#a * #b -> $mult a b"
 
 		-- prioritizing
-		, "x + a b {bs} -> x + (a b {bs})"
-		, "a b {bs} + x -> (a b {bs}) + x"
-		, "a * x y {ys} -> a * (x y {ys})"
-		, "x y {ys} * a -> (x y {ys}) * a"
+		, "{xs} + a b {bs} -> {xs} + (a b {bs})"
+		, "a b {bs} + {xs} -> (a b {bs}) + {xs}"
+		, "{as} * x y {ys} -> {as} * (x y {ys})"
+		, "x y {ys} * {as} -> (x y {ys}) * {as}"
+
+		, "0 * x -> 0"
+		, "1 * x -> x"
+		, "0 + x -> x"
 
 		, "w + #a -> a + w                | w !> #k"  -- commutative+
 		, "w * #a -> a * w                | w !> #k"  -- commutative*
+		, "w + (#a + y) -> a + (w + y)    | w !> #k"  -- commutative+2
+		, "w * (#a * y) -> a * (w * y)    | w !> #k"  -- commutative*2
+
 		, "#a + (#b + w) -> (a + b) + w"              -- associative+
 		, "#a * (#b * w) -> (a * b) * w"              -- associative*
 		, "#c * (x + y) -> (c * x) + (c * y)"         -- distributive
+
+		-- adding symbols with coefficients
+		, "(#a * x) + (#b * x) -> (a + b) * x"
+		, "(#a * x) + ((#b * x) + w) -> (a + b) * x + w"
+		, "x + (#b * x) -> (1 + b) * x"
+		, "x + ((#b * x) + w) -> (1 + b) * x + w"
 		]
 	,
 		[ ("1 + 2 + 3",                                        "6")
 		, ("a * b * c",                                        "(a * (b * c))")
 		, ("2 + 2 * 2",                                        "6")
 		, ("(1 + 2 + 3 * kek + 5) * (  2 + 3) + 2",            "(42 + (15 * kek))")
+		, ("1 + 2 + 3",                                        "6")
+		-- , ("+ 1 + 2 + 3",                                      "6") -- FAILING: no unary rules, TODO: fix this
+		-- , ("+ 1 * 2 * 3",                                      "6")
+		, ("2 + 2 * 2",                                        "6")
+		, ("2 * 2 + 2",                                        "6")
+		, ("1 + 2 * 3",                                        "7")
+		, ("1 * 2 + 3",                                        "5")
+		-- , ("1 * 2 + + 3",                                      "5")
+		-- , ("+ 1 * 2 + + 3",                                    "5")
+		, ("1 + ( 2 * 3)",                                     "7")
+		, ("22 + 33",                                          "55")
+		, ("3 * x + (1 * x + 5 * x)",                          "(9 * x)")
+		, ("3 * x + (1 * x + 1 + 5 * x)",                      "(1 + (9 * x))")
+		, ("3 * x + 3 + 5 * x + 10 + (1 * x + 1 + 5 * x)",     "(14 + (14 * x))")
+		, ("3 * x + 3 + 3 * x + 3 * z",                        "(3 + ((6 * x) + (3 * z)))")
+		, ("3 * (3 * z)",                                      "(9 * z)")
+		, ("3 * ( 2 + 3 * z )",                                "(6 + (9 * z))")
+		-- , ("bcd + ab",                                         "(ab + bcd)") -- FAILING: symbols are opaque, TODO: fix this
+		, ("4 * Head + 3",                                     "(3 + (4 * Head))")
+		, ("23Kappa + 3",                                      "(3 + 23Kappa)")
+		-- , ("4Head * 0.5",                                   "2Head") -- FAILING, not going to fix because "4 * Head * 0.5" -> "2 * Head", so thats ok
+		, ("(2 * x + 1 + 2 * x + 3 * x + 5 * x)",              "(1 + (12 * x))")
+		, ("1 + (2 * x + 3 + (3 * x + 5))",                          "(9 + (5 * x))")
+		, ("1 + (2 * x + 3 + 9 + 20 + (3 * x + 5 + (1 + 2 + 3))))",  "(44 + (5 * x))")
+		-- , ("(a + b) * (b + c)",                                "((a * b) + ((b * b) + ((a * c) + (b * c)))") -- FAILING: i don't want to distribute just because
+		-- , ("(3 + 4 * z) * ( 2 + 3 * z)",                       "(6 + (17 * z + ((12 * z) * z))") -- FAILING ^
+		, ("1 + 0 * (3 + x)",                                  "1")
+		, ("(0 + 1) * (3 + x)",                                "(3 + x)")
+		, ("0 * x + y",                                        "y")
+		, ("3 * y + 0 * x",                                    "(3 * y)")
 		]
 	)]
 
