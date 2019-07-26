@@ -101,11 +101,14 @@ type Number = Double
 numToTree :: Number -> Tree
 numToTree x = Leaf (showNoZeroes x)
 
+symbolToMaybeNum :: Symbol -> Maybe Number
+symbolToMaybeNum s = case readMaybe s :: Maybe Number of
+	Just x -> Just x
+	Nothing -> Nothing
+
 treeToMaybeNum :: Tree -> Maybe Number
 treeToMaybeNum t = case t of
-	(Leaf s) -> case readMaybe s :: Maybe Number of
-		Just x -> Just x
-		Nothing -> Nothing
+	(Leaf s) -> symbolToMaybeNum s
 	(Branch {}) -> Nothing
 
 data BuiltinRule
@@ -591,3 +594,28 @@ showNoZeroes x = if anydotq then striped else s
 		r = reverse s
 		anydotq = any (== '.') s
 		striped = reverse $ (dropWhile (== '.') . dropWhile (== '0')) r
+
+compareLeafs :: Symbol -> Symbol -> Ordering
+compareLeafs a b =
+	case symbolToMaybeNum a of
+		Nothing -> case symbolToMaybeNum b of
+			Nothing -> compare a b
+			Just bn -> GT
+		Just an -> case symbolToMaybeNum b of
+			Nothing -> LT
+			Just bn -> compare an bn
+
+instance Ord Tree where
+	compare a b =
+		case a of
+			(Leaf as) -> case b of
+				(Leaf bs) ->
+					compareLeafs as bs
+				(Branch {}) ->
+					LT -- ASSUMPTION: no singleton branches
+			(Branch xs) -> case b of
+				(Leaf {}) ->
+					GT -- ASSUMPTION: no singleton branches
+				(Branch ys) ->
+					compare xs ys -- NOTE: the size of branch is the secondary thing, the most important is first element of branch
+
