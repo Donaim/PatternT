@@ -460,29 +460,36 @@ exprToMatchPattern t = case t of
 
 
 parseReplacePart :: String -> Either ParseMatchError PatternReplacePart
-parseReplacePart text = case tree of
-		Right t -> Right (treeToReplacePattern t)
-		Left e -> Left (MakeTreeError e)
+parseReplacePart text = Right $ exprToReplacePattern expr
 	where
 	tokens = tokenize text
-	tree = makeTree tokens
+	expr = Group tokens
 
-treeToReplacePattern :: Tree -> PatternReplacePart
-treeToReplacePattern t = case t of
-	(Leaf s) ->
+exprToReplacePattern :: Expr -> PatternReplacePart
+exprToReplacePattern t = case t of
+	(Atom s) ->
 		(RVar s)
 
-	(Branch []) ->
+	(Group []) ->
 		(RGroup [])
-	(Branch (x : xs)) -> case x of
-		(Branch {}) -> group
-		(Leaf s) -> case s of
+	(Group (x : xs)) -> case x of
+		(Group {}) -> group
+		(Atom s) -> case s of
 			"$add" -> (RBuiltin BuiltinAdd args)
 			"$mult" -> (RBuiltin BuiltinMultiply args)
 			(_) -> group
 		where
-		group = (RGroup ((treeToReplacePattern x) : args))
-		args = (map treeToReplacePattern xs)
+		group = unsingleton (RGroup ((exprToReplacePattern x) : args))
+		args = (map exprToReplacePattern xs)
+
+		unsingleton child = case child of
+			(RGroup [x]) -> case x of
+				(RVar s) ->
+					if head s == '{' && last s == '}' -- NOTE: replace pattern is also aware of varadic args, but only here
+					then child
+					else x
+				(_) -> x
+			(_) -> child
 
 applyTreeOne :: (Tree -> Maybe Tree) -> Tree -> Maybe Tree
 applyTreeOne func t = case t of
