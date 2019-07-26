@@ -113,6 +113,8 @@ coms = [
 	(
 		[ "#a + #b -> $add a b"
 		, "#a * #b -> $mult a b"
+		, "#a + (#b + w) -> (a + b) + w"
+		, "#a * (#b * w) -> (a * b) * w"
 		, "(+ #x) -> x"
 		, "(#x +) -> x"
 
@@ -133,9 +135,6 @@ coms = [
 		, "a * (b * c) -> b * (a * c) | b < a"
 
 		-- associative
-		, "#a + (#b + w) -> (a + b) + w"              -- associative+
-		, "#a * (#b * w) -> (a * b) * w"              -- associative*
-
 		, "(a + b) + c -> (a + (b + c))"
 		, "(a * b) * c -> (a * (b * c))"
 
