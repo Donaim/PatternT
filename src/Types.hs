@@ -52,8 +52,6 @@ data Conditional
 
 type SimplifyPattern = (PatternMatchPart, PatternReplacePart, [Conditional])
 
-type BindingDict = [(String, [Tree])]
-
 data ParseMatchError
 	= Unknown String
 	| SplitFailed [String]

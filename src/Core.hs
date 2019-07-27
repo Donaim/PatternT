@@ -1,11 +1,13 @@
 
 module Core where
 
-import Data.List
 import Data.Maybe
 import Data.Either
 import Types
+import Dict
 import Util
+
+type BindingDict = Dict String [Tree]
 
 builtinReplace :: BuiltinRule -> [PatternReplacePart] -> BindingDict -> Tree
 builtinReplace rule args dict = case rule of
@@ -51,21 +53,6 @@ builtinReplace rule args dict = case rule of
 						Nothing -> treeArgs
 						Just acc -> (numToTree acc) : treeArgs
 					right = [Branch (treeLeft : allArgs)]
-
-emptyDict :: BindingDict
-emptyDict = []
-
-bindingGet :: BindingDict -> String -> Maybe [Tree]
-bindingGet dict key =
-	case find ((== key) . fst) dict of
-		Nothing -> Nothing
-		Just (k, v) -> Just v
-
-bindingAdd :: BindingDict -> String -> [Tree] -> BindingDict
-bindingAdd dict key value = (key, value) : dict
-
-bindingConcat :: BindingDict -> BindingDict -> BindingDict
-bindingConcat a b = a ++ b
 
 checkCond :: (Tree -> Tree) -> BindingDict -> Conditional -> Bool
 checkCond simplify dict cond = case cond of
