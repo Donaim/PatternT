@@ -176,9 +176,7 @@ data Conditional
 	| LECond PatternReplacePart PatternReplacePart
 	deriving (Eq, Show, Read)
 
-data SimplifyPattern
-	= SimplifyPatternRule PatternMatchPart PatternReplacePart [Conditional]
-	deriving (Eq, Show, Read)
+type SimplifyPattern = (PatternMatchPart, PatternReplacePart, [Conditional])
 
 type BindingDict = [(String, [Tree])]
 
@@ -215,14 +213,13 @@ checkCond simplify dict cond = case cond of
 			<= replaceWithDict dict right
 
 matchAndReplace :: (Tree -> Tree) -> SimplifyPattern -> Tree -> Maybe Tree
-matchAndReplace simplify pattern t = case pattern of
-	(SimplifyPatternRule match replace conds) ->
-		case matchGetDict match t of
-			Nothing -> Nothing
-			Just dict ->
-				if all (checkCond simplify dict) conds
-				then Just (replaceWithDict dict replace)
-				else Nothing
+matchAndReplace simplify (match, replace, conds) t =
+	case matchGetDict match t of
+		Nothing -> Nothing
+		Just dict ->
+			if all (checkCond simplify dict) conds
+			then Just (replaceWithDict dict replace)
+			else Nothing
 
 replaceWithDict :: BindingDict -> PatternReplacePart -> Tree
 replaceWithDict dict replace = case replace of
@@ -374,7 +371,7 @@ parseMatch text = do
 		match <- parseMatchPart beforeArrow
 		replace <- parseReplacePart replacePart
 
-		return (SimplifyPatternRule match replace goodConds)
+		return (match, replace, goodConds)
 
 	where
 	(beforeArrow, _, afterArrow) = partitionString "->" text
@@ -599,8 +596,8 @@ stringifyCond (LTCond a b) = stringifyReplacePart a ++ " < " ++ stringifyReplace
 stringifyCond (LECond a b) = stringifyReplacePart a ++ " <= " ++ stringifyReplacePart b
 
 stringifySimplifyPattern :: SimplifyPattern -> String
-stringifySimplifyPattern p = case p of
-	(SimplifyPatternRule match replace conds) -> concat $ intersperse " | " $ [stringifyMatchPart match ++ " -> " ++ stringifyReplacePart replace] ++ (map stringifyCond conds)
+stringifySimplifyPattern (match, replace, conds) =
+	concat $ intersperse " | " $ [stringifyMatchPart match ++ " -> " ++ stringifyReplacePart replace] ++ (map stringifyCond conds)
 
 stringifyBuiltin :: BuiltinRule -> String
 stringifyBuiltin rule = case rule of
