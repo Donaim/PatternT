@@ -200,16 +200,9 @@ exprToReplacePattern t = case t of
 
 	(Group []) ->
 		(RGroup [])
-	(Group (x : xs)) -> case x of
-		(Group {}) -> group
-		(Atom s) -> case s of
-			"$add" -> (RBuiltin BuiltinAdd args)
-			"$mult" -> (RBuiltin BuiltinMultiply args)
-			(_) -> group
+	(Group (x : xs)) ->
+		unsingleton (RGroup ((exprToReplacePattern x) : (map exprToReplacePattern xs)))
 		where
-		group = unsingleton (RGroup ((exprToReplacePattern x) : args))
-		args = (map exprToReplacePattern xs)
-
 		unsingleton child = case child of
 			(RGroup [x]) -> case x of
 				(RVar s) ->
@@ -244,7 +237,6 @@ stringifyBuiltinMatch m = case m of
 stringifyReplacePart :: PatternReplacePart -> String
 stringifyReplacePart t = case t of
 	(RVar s) -> s
-	(RBuiltin x xs) -> "(" ++ stringifyBuiltin x ++ concatMap ((' ' :) . stringifyReplacePart) xs ++ ")"
 	(RGroup []) -> "()"
 	(RGroup (x : xs)) -> "(" ++ stringifyReplacePart x ++ concatMap ((' ' :) . stringifyReplacePart) xs ++ ")"
 

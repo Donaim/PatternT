@@ -9,51 +9,6 @@ import Util
 
 type BindingDict = Dict String [Tree]
 
-builtinReplace :: BuiltinRule -> [PatternReplacePart] -> BindingDict -> Tree
-builtinReplace rule args dict = case rule of
-	BuiltinAdd -> withOp (+) 0
-	BuiltinMultiply -> withOp (*) 1
-
-	where
-	rargs :: [Tree]
-	rargs = map (replaceWithDict dict) args
-
-	numCastedRargs :: [Either Tree Number]
-	numCastedRargs = map numcast rargs
-	numcast :: Tree -> Either Tree Number
-	numcast t = case treeToMaybeNum t of
-		Just x -> Right x
-		Nothing -> Left t
-
-	withOp :: (Number -> Number -> Number) -> Number -> Tree
-	withOp op defaul = case withOpOnMaybeNums numCastedRargs op defaul of
-		[] -> numToTree defaul
-		[x] -> x
-		xs -> (Branch xs)
-
-	withOpOnMaybeNums :: [Either Tree Number] -> (Number -> Number -> Number) -> Number -> [Tree]
-	withOpOnMaybeNums mnums op defaul = loop Nothing mnums
-		where
-		loop :: Maybe Number -> [Either Tree Number] -> [Tree]
-		loop macc [] = case macc of
-			Nothing -> []
-			Just acc -> [numToTree acc]
-		loop macc (x : xs) =
-			case x of
-				Right num ->
-					let newacc = case macc of
-						Just acc -> op acc num
-						Nothing -> op defaul num
-					in loop (Just newacc) xs
-				Left t -> right
-					where
-					treeLeft = Leaf (stringifyBuiltin rule)
-					treeArgs = t : withOpOnMaybeNums xs op defaul
-					allArgs = case macc of
-						Nothing -> treeArgs
-						Just acc -> (numToTree acc) : treeArgs
-					right = [Branch (treeLeft : allArgs)]
-
 checkCond :: (Tree -> Tree) -> BindingDict -> Conditional -> Bool
 checkCond simplify dict cond = case cond of
 	(EqCond left right) ->
@@ -88,13 +43,9 @@ replaceWithDict dict replace = case replace of
 				[x] -> x
 				xs -> Branch xs
 			Nothing -> (Leaf token)
-	(RBuiltin builtin args) ->
-		replaceBuiltin builtin args
 	(RGroup xs) ->
 		replaceRgroup xs
 	where
-	replaceBuiltin builtin args = builtinReplace builtin args dict
-
 	replaceRgroup xs = case loop xs of
 			[x] -> x
 			xs -> Branch xs
@@ -108,8 +59,6 @@ replaceWithDict dict replace = case replace of
 							[x] -> x : loop rs
 							xs -> xs ++ loop rs -- Flattening the varargs
 						Nothing -> (Leaf token) : loop rs
-
-				(RBuiltin builtin args) -> replaceBuiltin builtin args : loop rs
 				(RGroup childs) -> replaceRgroup childs : loop rs
 
 matchGetDict :: PatternMatchPart -> Tree -> Maybe BindingDict

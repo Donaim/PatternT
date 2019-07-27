@@ -18,11 +18,6 @@ showNoZeroes x = if anydotq then striped else s
 		anydotq = any (== '.') s
 		striped = reverse $ (dropWhile (== '.') . dropWhile (== '0')) r
 
-stringifyBuiltin :: BuiltinRule -> String
-stringifyBuiltin rule = case rule of
-	BuiltinAdd -> "$add"
-	BuiltinMultiply -> "$mult"
-
 numToTree :: Number -> Tree
 numToTree x = Leaf (showNoZeroes x)
 

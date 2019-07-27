@@ -31,14 +31,8 @@ data PatternMatchPart
 
 type Number = Double
 
-data BuiltinRule
-	= BuiltinAdd
-	| BuiltinMultiply
-	deriving (Eq, Show, Read)
-
 data PatternReplacePart
 	= RVar Symbol
-	| RBuiltin BuiltinRule [PatternReplacePart]
 	| RGroup [PatternReplacePart]
 	deriving (Eq, Show, Read)
 
