@@ -4,9 +4,6 @@ module Core where
 import Data.List
 import Data.Maybe
 import Data.Either
-import Debug.Trace
-import Data.Char
-import Control.Monad
 import Types
 import Util
 
