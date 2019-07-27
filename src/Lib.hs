@@ -725,3 +725,17 @@ monadicApplySimplificationsUntil0Debug simplifications ctx0 t0 = loop simplifica
 			Just (newt, ruleName, newCtx) -> do
 				next <- loop simplifications newCtx newt
 				return $ (newt, ruleName, newCtx) : next
+
+monadicApplySimplificationsUntil0Last :: (Monad m) =>
+	[MonadicSimplify m ctx] ->
+	ctx ->
+	Tree ->
+	m (Tree, ctx)
+monadicApplySimplificationsUntil0Last simplifications ctx0 t0 = loop simplifications ctx0 t0
+	where
+	loop simplifications ctx t = do
+		r <- monadicApplyFirstSimplification simplifications ctx t
+		case r of
+			Nothing -> return (t, ctx)
+			Just (newt, ruleName, newCtx) -> do
+				loop simplifications newCtx newt
