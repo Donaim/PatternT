@@ -1,6 +1,7 @@
 
 module Util where
 
+import Text.Read (readMaybe)
 import Debug.Trace
 import Types
 
@@ -21,6 +22,19 @@ stringifyBuiltin :: BuiltinRule -> String
 stringifyBuiltin rule = case rule of
 	BuiltinAdd -> "$add"
 	BuiltinMultiply -> "$mult"
+
+numToTree :: Number -> Tree
+numToTree x = Leaf (showNoZeroes x)
+
+symbolToMaybeNum :: Symbol -> Maybe Number
+symbolToMaybeNum s = case readMaybe s :: Maybe Number of
+	Just x -> Just x
+	Nothing -> Nothing
+
+treeToMaybeNum :: Tree -> Maybe Number
+treeToMaybeNum t = case t of
+	(Leaf s) -> symbolToMaybeNum s
+	(Branch {}) -> Nothing
 
 traceS :: (Show a) => String -> a -> a
 traceS text x = trace (text ++ show x) x

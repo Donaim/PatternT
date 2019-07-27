@@ -1,7 +1,6 @@
 
 module Core where
 
-import Text.Read (readMaybe)
 import Data.List
 import Data.Maybe
 import Data.Either
@@ -10,19 +9,6 @@ import Data.Char
 import Control.Monad
 import Types
 import Util
-
-numToTree :: Number -> Tree
-numToTree x = Leaf (showNoZeroes x)
-
-symbolToMaybeNum :: Symbol -> Maybe Number
-symbolToMaybeNum s = case readMaybe s :: Maybe Number of
-	Just x -> Just x
-	Nothing -> Nothing
-
-treeToMaybeNum :: Tree -> Maybe Number
-treeToMaybeNum t = case t of
-	(Leaf s) -> symbolToMaybeNum s
-	(Branch {}) -> Nothing
 
 builtinReplace :: BuiltinRule -> [PatternReplacePart] -> BindingDict -> Tree
 builtinReplace rule args dict = case rule of
