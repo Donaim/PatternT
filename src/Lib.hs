@@ -649,11 +649,15 @@ instance Ord Tree where
 -- MONADIC SIMPLIFICATIONS --
 -----------------------------
 
--- | Pairs of (function name, monadic action on tree that matches)
-type MonadicSimplify m = (String, Tree -> m (Maybe Tree))
+-- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the read-write context that is carried around
+type MonadicSimplify m ctx = (String, ctx -> Tree -> m (Maybe (ctx, Tree)))
 
-monadicMatchAndReplace :: (Monad m) => MonadicSimplify m -> Tree -> m (Maybe Tree)
-monadicMatchAndReplace (name, func) tree =
+monadicMatchAndReplace :: (Monad m) =>
+	String ->
+	(Tree -> m (Maybe (ctx, Tree))) ->
+	Tree ->
+	m (Maybe (ctx, Tree))
+monadicMatchAndReplace name func tree =
 	case tree of
 		(Leaf s) ->
 			if s == name
@@ -668,47 +672,56 @@ monadicMatchAndReplace (name, func) tree =
 				(_) -> return Nothing
 		(_) -> return Nothing
 
--- TODO: avoid duplication of `applyTreeOne` or prove impossible
-monadicApplyTreeOne :: (Monad m) => (Tree -> m (Maybe Tree)) -> Tree -> m (Maybe Tree)
+monadicApplyTreeOne :: (Monad m) =>
+	(Tree -> m (Maybe (ctx, Tree))) ->
+	Tree ->
+	m (Maybe (ctx, Tree))
 monadicApplyTreeOne func t = case t of
 	(Leaf s) -> func t
 	(Branch childs) -> do
 		looped <- loop [] childs
 		case looped of
-			Just newme -> return $ Just newme
+			Just x -> return $ Just x
 			Nothing -> func t
 		where
-		-- loop :: (Monad m) => [Tree] -> [Tree] -> m (Maybe Tree) -- TODO: make this type to work \=
+		-- loop :: (Monad m) => [Tree] -> [Tree] -> m (Maybe (ctx, Tree)) -- TODO: make this type to work \=
 		loop previus [] = return Nothing
 		loop previus (c : cs) = do
 			r <- monadicApplyTreeOne func c
 			case r of
-				Just newc -> return $ Just $
+				Just (ctx, newc) -> return $ Just $ (,) ctx $
 					case newc of
 						(Branch []) -> (Branch (previus ++ cs)) -- NOTE: erasing empty leafs!
 						(Branch [x]) -> (Branch (previus ++ [x] ++ cs)) -- NOTE: erasing singletons! NOTE: the top level tree can still be a singleton, but that's ok since we will match its children anyway
 						(_) -> (Branch (previus ++ [newc] ++ cs))
 				Nothing -> loop (previus ++ [c]) cs
 
-monadicApplyFirstSimplification :: (Monad m) => [MonadicSimplify m] -> Tree -> m (Maybe (Tree, MonadicSimplify m))
-monadicApplyFirstSimplification simplifications t0 = loop simplifications t0
+monadicApplyFirstSimplification :: (Monad m) =>
+	[MonadicSimplify m ctx] ->
+	ctx ->
+	Tree ->
+	m (Maybe (Tree, String, ctx))
+monadicApplyFirstSimplification simplifications ctx t0 = loop simplifications t0
 	where
-	simplify = undefined
 	loop simplifications t = case simplifications of
 		[] -> return Nothing
-		(x : xs) -> do
-			r <- monadicApplyTreeOne (monadicMatchAndReplace x) t
+		((name, func) : xs) -> do
+			r <- monadicApplyTreeOne (monadicMatchAndReplace name (func ctx)) t
 			case r of
-				Just newt -> return $ Just (newt, x)
+				Just (newCtx, newt) -> return $ Just (newt, name, newCtx)
 				Nothing -> loop xs t
 
-monadicApplySimplificationsUntil0Debug :: (Monad m) => [MonadicSimplify m] -> Tree -> m [(Tree, MonadicSimplify m)]
-monadicApplySimplificationsUntil0Debug simplifications t0 = loop simplifications t0
+monadicApplySimplificationsUntil0Debug :: (Monad m) =>
+	[MonadicSimplify m ctx] ->
+	ctx ->
+	Tree ->
+	m [(Tree, String, ctx)]
+monadicApplySimplificationsUntil0Debug simplifications ctx0 t0 = loop simplifications ctx0 t0
 	where
-	loop simplifications t = do
-		r <- monadicApplyFirstSimplification simplifications t
+	loop simplifications ctx t = do
+		r <- monadicApplyFirstSimplification simplifications ctx t
 		case r of
 			Nothing -> return []
-			Just (newt, rule) -> do
-				next <- loop simplifications newt
-				return $ (newt, rule) : next
+			Just (newt, ruleName, newCtx) -> do
+				next <- loop simplifications newCtx newt
+				return $ (newt, ruleName, newCtx) : next
