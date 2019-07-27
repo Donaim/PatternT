@@ -4,15 +4,15 @@ github:              "Donaim/hacalc"
 license:             BSD3
 author:              "Donaim"
 maintainer:          "3Donaim@gmail.com"
-copyright:           "MIT"
+copyright:           "Donaim"
 
 extra-source-files:
 - README.md
 - ChangeLog.md
 
 # Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
+synopsis:            Symbolic calculator based on pattern matching
+category:            Compiler
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
