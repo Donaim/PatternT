@@ -739,3 +739,63 @@ monadicApplySimplificationsUntil0Last simplifications ctx0 t0 = loop simplificat
 			Nothing -> return (t, ctx)
 			Just (newt, ruleName, newCtx) -> do
 				loop simplifications newCtx newt
+
+---------------------------
+-- MIXED SIMPLIFICATIONS --
+---------------------------
+
+type EitherSimplification m ctx = Either SimplifyPattern (MonadicSimplify m ctx)
+
+mixedApplyFirstSimplification :: (Monad m) =>
+	[EitherSimplification m ctx] ->
+	ctx ->
+	Tree ->
+	m (Maybe (Tree, Either SimplifyPattern String, ctx))
+mixedApplyFirstSimplification simplifications ctx t0 = loop simplifications t0
+	where
+	onlyPure = fst $ partitionEithers simplifications
+	simplify = applySimplificationsUntil0Last onlyPure
+
+	loop simplifications t = case simplifications of
+		[] -> return Nothing
+		(simpl : xs) -> case simpl of
+				Left pattern ->
+					let r = applyTreeOne (matchAndReplace simplify pattern) t
+					in case r of
+						Just newt -> return $ Just (newt, Left pattern, ctx)
+						Nothing -> loop xs t
+
+				Right (name, func) -> do
+					r <- monadicApplyTreeOne (monadicMatchAndReplace name (func ctx)) t
+					case r of
+						Just (newCtx, newt) -> return $ Just (newt, Right name, newCtx)
+						Nothing -> loop xs t
+
+mixedApplySimplificationsUntil0Last :: (Monad m) =>
+	[EitherSimplification m ctx] ->
+	ctx ->
+	Tree ->
+	m (Tree, ctx)
+mixedApplySimplificationsUntil0Last simplifications ctx0 t0 = loop simplifications ctx0 t0
+	where
+	loop simplifications ctx t = do
+		r <- mixedApplyFirstSimplification simplifications ctx t
+		case r of
+			Nothing -> return (t, ctx)
+			Just (newt, ruleName, newCtx) -> do
+				loop simplifications newCtx newt
+
+mixedApplySimplificationsUntil0Debug :: (Monad m) =>
+	[EitherSimplification m ctx] ->
+	ctx ->
+	Tree ->
+	m [(Tree, Either SimplifyPattern String, ctx)]
+mixedApplySimplificationsUntil0Debug simplifications ctx0 t0 = loop simplifications ctx0 t0
+	where
+	loop simplifications ctx t = do
+		r <- mixedApplyFirstSimplification simplifications ctx t
+		case r of
+			Nothing -> return []
+			Just (newt, rule, newCtx) -> do
+				next <- loop simplifications newCtx newt
+				return $ (newt, rule, newCtx) : next
