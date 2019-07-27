@@ -5,6 +5,7 @@ import System.Exit
 import Control.Monad
 
 import Lib
+import SimplifyInterface
 import Types
 
 coms :: [([String], [(String, String)])]

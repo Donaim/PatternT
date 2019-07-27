@@ -9,7 +9,6 @@ import Data.Char
 import Control.Monad
 
 import Types
-import Core
 import Util
 
 -------------
@@ -259,72 +258,3 @@ stringifyCond (LECond a b) = stringifyReplacePart a ++ " <= " ++ stringifyReplac
 stringifySimplifyPattern :: SimplifyPattern -> String
 stringifySimplifyPattern (match, replace, conds) =
 	concat $ intersperse " | " $ [stringifyMatchPart match ++ " -> " ++ stringifyReplacePart replace] ++ (map stringifyCond conds)
-
----------------------
--- APPLY INTERFACE --
----------------------
-
-applySimplificationsUntil0Debug :: [SimplifyPattern] -> Tree -> [(Tree, SimplifyPattern)]
-applySimplificationsUntil0Debug patterns0 t0 = loop patterns0 t0
-	where
-	loop patterns t = case applyFirstSimplification patterns t of
-		Nothing -> []
-		Just (newt, rule) -> (newt, rule) : loop patterns newt
-
-monadicApplySimplificationsUntil0Debug :: (Monad m) =>
-	[MonadicSimplify m ctx] ->
-	ctx ->
-	Tree ->
-	m [(Tree, String, ctx)]
-monadicApplySimplificationsUntil0Debug simplifications ctx0 t0 = loop simplifications ctx0 t0
-	where
-	loop simplifications ctx t = do
-		r <- monadicApplyFirstSimplification simplifications ctx t
-		case r of
-			Nothing -> return []
-			Just (newt, ruleName, newCtx) -> do
-				next <- loop simplifications newCtx newt
-				return $ (newt, ruleName, newCtx) : next
-
-monadicApplySimplificationsUntil0Last :: (Monad m) =>
-	[MonadicSimplify m ctx] ->
-	ctx ->
-	Tree ->
-	m (Tree, ctx)
-monadicApplySimplificationsUntil0Last simplifications ctx0 t0 = loop simplifications ctx0 t0
-	where
-	loop simplifications ctx t = do
-		r <- monadicApplyFirstSimplification simplifications ctx t
-		case r of
-			Nothing -> return (t, ctx)
-			Just (newt, ruleName, newCtx) -> do
-				loop simplifications newCtx newt
-
-mixedApplySimplificationsUntil0Last :: (Monad m) =>
-	[EitherSimplification m ctx] ->
-	ctx ->
-	Tree ->
-	m (Tree, ctx)
-mixedApplySimplificationsUntil0Last simplifications ctx0 t0 = loop simplifications ctx0 t0
-	where
-	loop simplifications ctx t = do
-		r <- mixedApplyFirstSimplification simplifications ctx t
-		case r of
-			Nothing -> return (t, ctx)
-			Just (newt, ruleName, newCtx) -> do
-				loop simplifications newCtx newt
-
-mixedApplySimplificationsUntil0Debug :: (Monad m) =>
-	[EitherSimplification m ctx] ->
-	ctx ->
-	Tree ->
-	m [(Tree, Either SimplifyPattern String, ctx)]
-mixedApplySimplificationsUntil0Debug simplifications ctx0 t0 = loop simplifications ctx0 t0
-	where
-	loop simplifications ctx t = do
-		r <- mixedApplyFirstSimplification simplifications ctx t
-		case r of
-			Nothing -> return []
-			Just (newt, rule, newCtx) -> do
-				next <- loop simplifications newCtx newt
-				return $ (newt, rule, newCtx) : next

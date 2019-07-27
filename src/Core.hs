@@ -259,58 +259,6 @@ applyTreeOne func t = case t of
 					(_) -> (Branch (previus ++ [newc] ++ cs))
 			Nothing -> loop (previus ++ [c]) cs
 
-applySimplifications :: [SimplifyPattern] -> Tree -> [Tree]
-applySimplifications patterns t0 = loop patterns t0
-	where
-	simplify = applySimplificationsUntil0Last patterns
-	loop patterns t = case patterns of
-		[] -> []
-		(x : xs) -> case applyTreeOne (matchAndReplace simplify x) t of
-			Just newt -> newt : (loop xs newt)
-			Nothing -> loop xs t
-
--- Breaks on first success
-applyFirstSimplification :: [SimplifyPattern] -> Tree -> Maybe (Tree, SimplifyPattern)
-applyFirstSimplification patterns t0 = loop patterns t0
-	where
-	simplify = applySimplificationsUntil0Last patterns
-	loop patterns t = case patterns of
-		[] -> Nothing
-		(x : xs) -> case applyTreeOne (matchAndReplace simplify x) t of
-			Just newt -> Just (newt, x)
-			Nothing -> loop xs t
-
-applySimplificationsUntil0Last :: [SimplifyPattern] -> Tree -> Tree
-applySimplificationsUntil0Last patterns0 t0 = loop patterns0 t0
-	where
-	loop patterns t = case applyFirstSimplification patterns t of
-		Nothing -> t
-		Just newt -> loop patterns (fst newt)
-
------------------------------
--- MONADIC SIMPLIFICATIONS --
------------------------------
-
-monadicMatchAndReplace :: (Monad m) =>
-	String ->
-	(Tree -> m (Maybe (ctx, Tree))) ->
-	Tree ->
-	m (Maybe (ctx, Tree))
-monadicMatchAndReplace name func tree =
-	case tree of
-		(Leaf s) ->
-			if s == name
-			then func tree
-			else return Nothing
-		(Branch (x : xs)) ->
-			case x of
-				(Leaf s) ->
-					if s == name
-					then func tree
-					else return Nothing
-				(_) -> return Nothing
-		(_) -> return Nothing
-
 monadicApplyTreeOne :: (Monad m) =>
 	(Tree -> m (Maybe (ctx, Tree))) ->
 	Tree ->
@@ -334,47 +282,3 @@ monadicApplyTreeOne func t = case t of
 						(Branch [x]) -> (Branch (previus ++ [x] ++ cs)) -- NOTE: erasing singletons! NOTE: the top level tree can still be a singleton, but that's ok since we will match its children anyway
 						(_) -> (Branch (previus ++ [newc] ++ cs))
 				Nothing -> loop (previus ++ [c]) cs
-
-monadicApplyFirstSimplification :: (Monad m) =>
-	[MonadicSimplify m ctx] ->
-	ctx ->
-	Tree ->
-	m (Maybe (Tree, String, ctx))
-monadicApplyFirstSimplification simplifications ctx t0 = loop simplifications t0
-	where
-	loop simplifications t = case simplifications of
-		[] -> return Nothing
-		((name, func) : xs) -> do
-			r <- monadicApplyTreeOne (monadicMatchAndReplace name (func ctx)) t
-			case r of
-				Just (newCtx, newt) -> return $ Just (newt, name, newCtx)
-				Nothing -> loop xs t
-
------------
--- MIXED --
------------
-
-mixedApplyFirstSimplification :: (Monad m) =>
-	[EitherSimplification m ctx] ->
-	ctx ->
-	Tree ->
-	m (Maybe (Tree, Either SimplifyPattern String, ctx))
-mixedApplyFirstSimplification simplifications ctx t0 = loop simplifications t0
-	where
-	onlyPure = fst $ partitionEithers simplifications
-	simplify = applySimplificationsUntil0Last onlyPure
-
-	loop simplifications t = case simplifications of
-		[] -> return Nothing
-		(simpl : xs) -> case simpl of
-				Left pattern ->
-					let r = applyTreeOne (matchAndReplace simplify pattern) t
-					in case r of
-						Just newt -> return $ Just (newt, Left pattern, ctx)
-						Nothing -> loop xs t
-
-				Right (name, func) -> do
-					r <- monadicApplyTreeOne (monadicMatchAndReplace name (func ctx)) t
-					case r of
-						Just (newCtx, newt) -> return $ Just (newt, Right name, newCtx)
-						Nothing -> loop xs t
