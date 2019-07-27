@@ -1,9 +1,11 @@
 
-import Lib
 import Data.Either
 import Data.Maybe
 import System.Exit
 import Control.Monad
+
+import Lib
+import Types
 
 coms :: [([String], [(String, String)])]
 coms = [

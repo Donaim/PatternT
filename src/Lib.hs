@@ -8,15 +8,10 @@ import Debug.Trace
 import Data.Char
 import Control.Monad
 
+import Types
+
 traceS :: (Show a) => String -> a -> a
 traceS text x = trace (text ++ show x) x
-
-type Symbol = String
-
-data Expr
-	= Atom Symbol
-	| Group [Expr]
-	deriving (Eq, Show, Read)
 
 tokenize :: String -> Either ParseError [Expr]
 tokenize s = case rest of
@@ -56,11 +51,6 @@ tokenize s = case rest of
 			(c : r) ->
 				tokenize' buffer (cur ++ [c]) r
 
-data Tree
-	= Leaf Symbol
-	| Branch [Tree]
-	deriving (Eq, Show, Read)
-
 makeTree :: [Expr] -> Either ParseError Tree
 makeTree exprs = case exprs of
 	[] -> Right $ Branch []
@@ -80,24 +70,6 @@ makeTreeWithSingletons expr = case expr of
 	Atom sym -> Leaf sym
 	Group g -> Branch $ map makeTreeWithSingletons g
 
-data ParseError
-	= FreeTokensAfterClose String
-	deriving (Eq, Show, Read)
-
-data BuiltinMatchEnum
-	= BuiltinMatchNumber Symbol
-	deriving (Eq, Show, Read)
-
-data PatternMatchPart
-	= Variable Symbol
-	| NameMatch Symbol
-	| VaradicMatch Symbol
-	| BuiltinMatch BuiltinMatchEnum
-	| MatchGroup PatternMatchPart [PatternMatchPart]
-	deriving (Eq, Show, Read)
-
-type Number = Double
-
 numToTree :: Number -> Tree
 numToTree x = Leaf (showNoZeroes x)
 
@@ -110,11 +82,6 @@ treeToMaybeNum :: Tree -> Maybe Number
 treeToMaybeNum t = case t of
 	(Leaf s) -> symbolToMaybeNum s
 	(Branch {}) -> Nothing
-
-data BuiltinRule
-	= BuiltinAdd
-	| BuiltinMultiply
-	deriving (Eq, Show, Read)
 
 builtinReplace :: BuiltinRule -> [PatternReplacePart] -> BindingDict -> Tree
 builtinReplace rule args dict = case rule of
@@ -160,25 +127,6 @@ builtinReplace rule args dict = case rule of
 						Nothing -> treeArgs
 						Just acc -> (numToTree acc) : treeArgs
 					right = [Branch (treeLeft : allArgs)]
-
-
-data PatternReplacePart
-	= RVar Symbol
-	| RBuiltin BuiltinRule [PatternReplacePart]
-	| RGroup [PatternReplacePart]
-	deriving (Eq, Show, Read)
-
-data Conditional
-	= EqCond PatternReplacePart PatternReplacePart
-	| NeqCond PatternReplacePart PatternReplacePart
-	| NotmatchCond PatternReplacePart PatternMatchPart
-	| LTCond PatternReplacePart PatternReplacePart
-	| LECond PatternReplacePart PatternReplacePart
-	deriving (Eq, Show, Read)
-
-type SimplifyPattern = (PatternMatchPart, PatternReplacePart, [Conditional])
-
-type BindingDict = [(String, [Tree])]
 
 emptyDict :: BindingDict
 emptyDict = []
@@ -349,15 +297,6 @@ matchGroups dict (p : ps) (t : ts) = case p of
 					(_) -> continue
 					where continue = varadicUntilName nameMatch (t : buf) ts
 			where break = (reverse buf, trees)
-
-data ParseMatchError
-	= Unknown String
-	| SplitFailed [String]
-	| CondExpected String
-	| ExpectedClosingBracket String
-	| MatchEmptyTreeError
-	| TokenizeError ParseError
-	deriving (Eq, Show, Read)
 
 maybeHead :: [a] -> Maybe a
 maybeHead [] = Nothing
