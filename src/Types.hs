@@ -59,3 +59,5 @@ data ParseMatchError
 type MonadicSimplify m ctx = (String, ctx -> Tree -> m (Maybe (ctx, Tree)))
 
 type EitherSimplification m ctx = Either SimplifyPattern (MonadicSimplify m ctx)
+
+type SimplifyTraceElem = Either SimplifyPattern String
