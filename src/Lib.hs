@@ -12,6 +12,10 @@ import Types
 import Core
 import Util
 
+-------------
+-- PARSING --
+-------------
+
 tokenize :: String -> Either ParseError [Expr]
 tokenize s = case rest of
 	[] -> Right $ reverse exprs
@@ -295,10 +299,6 @@ monadicApplySimplificationsUntil0Last simplifications ctx0 t0 = loop simplificat
 			Nothing -> return (t, ctx)
 			Just (newt, ruleName, newCtx) -> do
 				loop simplifications newCtx newt
-
----------------------------
--- MIXED SIMPLIFICATIONS --
----------------------------
 
 mixedApplySimplificationsUntil0Last :: (Monad m) =>
 	[EitherSimplification m ctx] ->
