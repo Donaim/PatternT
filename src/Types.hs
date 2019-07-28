@@ -65,7 +65,9 @@ type MonadicSimplify m ctx = (String, ctx -> Tree -> m (Maybe (ctx, Tree)))
 
 type EitherSimplification m ctx = Either SimplifyPattern (MonadicSimplify m ctx)
 
+type PureSimplificationF = ((String), (Tree -> Maybe Tree))
+
 -- | General simplification possibilities. Basically EitherSimplification + Pure functions
-type SimplificationF m ctx = Tuple3 SimplifyPattern (MonadicSimplify m ctx) ((String), (Tree -> Maybe Tree))
+type SimplificationF m ctx = Tuple3 SimplifyPattern (MonadicSimplify m ctx) PureSimplificationF
 
 type SimplifyTraceElem = Either SimplifyPattern String

@@ -197,3 +197,18 @@ mixedApplySimplificationsUntil0Debug simplifications ctx0 t0 = loop simplificati
 			Just (newt, rule, newCtx) -> do
 				next <- loop simplifications newCtx newt
 				return $ (newt, rule, newCtx) : next
+
+mixedApplySimplificationsWithPureUntil0Debug :: (Monad m) =>
+	[SimplificationF m ctx] ->
+	ctx ->
+	Tree ->
+	m [(Tree, Either SimplifyPattern String, ctx)]
+mixedApplySimplificationsWithPureUntil0Debug simplifications ctx0 t0 = loop simplifications ctx0 t0
+	where
+	loop simplifications ctx t = do
+		r <- mixedApplyFirstSimplificationWithPure simplifications ctx t
+		case r of
+			Nothing -> return []
+			Just (newt, rule, newCtx) -> do
+				next <- loop simplifications newCtx newt
+				return $ (newt, rule, newCtx) : next

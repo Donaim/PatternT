@@ -195,7 +195,7 @@ coms = [
 type SimplifyMonad = IO
 type SimplifyCtx = ()
 type MonadicSimplifyT = MonadicSimplify SimplifyMonad SimplifyCtx
-type EitherSimpT = EitherSimplification SimplifyMonad SimplifyCtx
+type SimlifyFT = SimplificationF SimplifyMonad SimplifyCtx
 
 simplifyCtxInitial :: SimplifyCtx
 simplifyCtxInitial = ()
@@ -221,17 +221,17 @@ badRules = map fst partitioned
 okRulesStr :: [[String]]
 okRulesStr = map (map stringifySimplifyPattern) okRules
 
-monadicRules :: [MonadicSimplifyT]
-monadicRules =
-	[ monadicRuleAdd
-	, monadicRuleMult
+pureRules :: [PureSimplificationF]
+pureRules =
+	[ ("$add", ruleAdd "$add")
+	, ("$mult", ruleMult "$mult")
 	]
 
-mixedRules :: [[EitherSimpT]]
+mixedRules :: [[SimlifyFT]]
 mixedRules = map mapf okRules
 	where
-	rightMonadic = map Right monadicRules
-	mapf ruleset = rightMonadic ++ map Left ruleset
+	rightMonadic = map Tuple32 pureRules
+	mapf ruleset = rightMonadic ++ map Tuple30 ruleset
 
 -----------------
 -- EXPRESSIONS --
@@ -273,9 +273,9 @@ simplified = unlift simplifiedM
 simplified0 :: [[(Tree, SimplifyMonad [(Tree, SimplifyTraceElem, SimplifyCtx)])]]
 simplified0 = map simpli (zip mixedRules okTrees)
 
-simpli :: ([EitherSimpT], [Tree]) -> [(Tree, SimplifyMonad [(Tree, SimplifyTraceElem, SimplifyCtx)])]
+simpli :: ([SimlifyFT], [Tree]) -> [(Tree, SimplifyMonad [(Tree, SimplifyTraceElem, SimplifyCtx)])]
 simpli (rules, trees) =
-	map (\ t -> (t, mixedApplySimplificationsUntil0Debug rules simplifyCtxInitial t)) trees
+	map (\ t -> (t, mixedApplySimplificationsWithPureUntil0Debug rules simplifyCtxInitial t)) trees
 
 simplifiedM :: SimplifyMonad [[(Tree, [(Tree, SimplifyTraceElem, SimplifyCtx)])]]
 simplifiedM = sequence $ map mapf simplified0
