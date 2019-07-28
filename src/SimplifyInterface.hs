@@ -67,25 +67,28 @@ liftPure name pure = (name, func)
 		Nothing -> Nothing
 		Just newt -> Just (ctx, newt)
 
+withFunctionNameCheck :: b -> (String, Tree -> b) -> (Tree -> b)
+withFunctionNameCheck defaul (name, func) tree = case tree of -- NOTE: in simplify function we always check the name!
+	(Leaf s) ->
+		if s == name
+		then func tree
+		else defaul
+	(Branch (x : xs)) ->
+		case x of
+			(Leaf s) ->
+				if s == name
+				then func tree
+				else defaul
+			(_) -> defaul
+	(_) -> defaul
+
 monadicMatchAndReplace :: (Monad m) =>
 	String ->
 	(Tree -> m (Maybe (ctx, Tree))) ->
 	Tree ->
 	m (Maybe (ctx, Tree))
-monadicMatchAndReplace name func tree =
-	case tree of
-		(Leaf s) ->
-			if s == name
-			then func tree
-			else return Nothing
-		(Branch (x : xs)) ->
-			case x of
-				(Leaf s) ->
-					if s == name
-					then func tree
-					else return Nothing
-				(_) -> return Nothing
-		(_) -> return Nothing
+monadicMatchAndReplace name func =
+	withFunctionNameCheck (return Nothing) (name, func)
 
 monadicApplyFirstSimplification :: (Monad m) =>
 	[MonadicSimplify m ctx] ->
@@ -159,7 +162,7 @@ mixedApplyFirstSimplificationWithPure simplifications ctx t0 =
 	collectSimplify (f : fs) = case f of
 		Tuple30 pattern -> (applyPattern pattern) : collectSimplify fs
 		Tuple31 {} -> collectSimplify fs
-		Tuple32 (name, func) -> func : collectSimplify fs
+		Tuple32 pure -> (withFunctionNameCheck Nothing pure) : collectSimplify fs
 
 -----------
 -- LOOPS --
