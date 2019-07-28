@@ -4,23 +4,15 @@ module MonadicRules where
 
 import Types
 import Util
+import SimplifyInterface
 
 monadicRuleAdd :: (Monad m) => MonadicSimplify m ctx
-monadicRuleAdd = (name, func)
-	where
-	name = "$add"
-	func ctx t = return $ case ruleAdd name t of
-		Nothing -> Nothing
-		Just newt -> Just (ctx, newt)
+monadicRuleAdd = liftPure name (ruleAdd name)
+	where name = "$add"
 
 monadicRuleMult :: (Monad m) => MonadicSimplify m ctx
-monadicRuleMult = (name, func)
-	where
-	name = "$mult"
-	func ctx t = return $ case ruleMult name t of
-		Nothing -> Nothing
-		Just newt -> Just (ctx, newt)
-
+monadicRuleMult = liftPure name (ruleMult name)
+	where name = "$mult"
 
 ruleAdd :: String -> Tree -> Maybe Tree
 ruleAdd name t = case t of

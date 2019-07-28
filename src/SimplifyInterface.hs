@@ -40,9 +40,23 @@ applySimplificationsUntil0Last patterns0 t0 = loop patterns0 t0
 		Nothing -> t
 		Just newt -> loop patterns (fst newt)
 
+applySimplificationsUntil0LastF :: (Tree -> Maybe Tree) -> Tree -> Tree
+applySimplificationsUntil0LastF func t0 = loop t0
+	where
+	loop t = case func t of
+		Nothing -> t
+		Just newt -> loop newt
+
 -----------------------------
 -- MONADIC SIMPLIFICATIONS --
 -----------------------------
+
+liftPure :: (Monad m) => String -> (Tree -> Maybe Tree) -> MonadicSimplify m ctx
+liftPure name pure = (name, func)
+	where
+	func ctx t = return $ case pure t of
+		Nothing -> Nothing
+		Just newt -> Just (ctx, newt)
 
 monadicMatchAndReplace :: (Monad m) =>
 	String ->
