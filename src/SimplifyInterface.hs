@@ -43,11 +43,11 @@ applyFirstSimplificationF funcs t0 = loop funcs t0
 			Nothing -> loop fs t
 
 applySimplificationsUntil0Last :: [SimplifyPattern] -> Tree -> Tree
-applySimplificationsUntil0Last patterns0 t0 = loop patterns0 t0
+applySimplificationsUntil0Last patterns t0 = loop t0
 	where
-	loop patterns t = case applyFirstSimplification patterns t of
+	loop t = case applyFirstSimplification patterns t of
 		Nothing -> t
-		Just newt -> loop patterns (fst newt)
+		Just newt -> loop (fst newt)
 
 applySimplificationsUntil0LastF :: (Tree -> Maybe Tree) -> Tree -> Tree
 applySimplificationsUntil0LastF func t0 = loop t0
@@ -140,15 +140,15 @@ mixedApplySimplificationsWithPureUntil0Debug :: (Monad m) =>
 	ctx ->
 	Tree ->
 	m [(Tree, Either SimplifyPattern String, ctx)]
-mixedApplySimplificationsWithPureUntil0Debug simplifications ctx0 t0 = loop simplifications ctx0 t0
+mixedApplySimplificationsWithPureUntil0Debug simplifications ctx0 t0 = loop ctx0 t0
 	where
 	pureSimplify = makePureSimplify simplifications
-	loop simplifications ctx t = do
+	loop ctx t = do
 		r <- mixedApplyFirstSimplificationWithPure simplifications ctx t
 		case r of
 			Nothing -> return []
 			Just (newt, rule, newCtx) -> do
-				next <- loop simplifications newCtx newt
+				next <- loop newCtx newt
 				return $ (newt, rule, newCtx) : next
 
 -----------
