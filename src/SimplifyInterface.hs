@@ -60,28 +60,6 @@ applySimplificationsUntil0LastF func t0 = loop t0
 -- MONADIC SIMPLIFICATIONS --
 -----------------------------
 
-liftPure :: (Monad m) => String -> (Tree -> Maybe Tree) -> MonadicSimplify m ctx
-liftPure name pure = (name, func)
-	where
-	func ctx t = return $ case pure t of
-		Nothing -> Nothing
-		Just newt -> Just (ctx, newt)
-
-withFunctionNameCheck :: b -> (String, Tree -> b) -> (Tree -> b)
-withFunctionNameCheck defaul (name, func) tree = case tree of -- NOTE: in simplify function we always check the name!
-	(Leaf s) ->
-		if s == name
-		then func tree
-		else defaul
-	(Branch (x : xs)) ->
-		case x of
-			(Leaf s) ->
-				if s == name
-				then func tree
-				else defaul
-			(_) -> defaul
-	(_) -> defaul
-
 monadicMatchAndReplace :: (Monad m) =>
 	String ->
 	(Tree -> m (Maybe (ctx, Tree))) ->
@@ -187,3 +165,30 @@ mixedApplySimplificationsWithPureUntil0Debug simplifications ctx0 t0 = loop simp
 			Just (newt, rule, newCtx) -> do
 				next <- loop simplifications newCtx newt
 				return $ (newt, rule, newCtx) : next
+
+-----------
+-- UTILS --
+-----------
+
+liftPure :: (Monad m) => String -> (Tree -> Maybe Tree) -> MonadicSimplify m ctx
+liftPure name pure = (name, func)
+	where
+	func ctx t = return $ case pure t of
+		Nothing -> Nothing
+		Just newt -> Just (ctx, newt)
+
+withFunctionNameCheck :: b -> (String, Tree -> b) -> (Tree -> b)
+withFunctionNameCheck defaul (name, func) tree = case tree of -- NOTE: in simplify function we always check the name!
+	(Leaf s) ->
+		if s == name
+		then func tree
+		else defaul
+	(Branch (x : xs)) ->
+		case x of
+			(Leaf s) ->
+				if s == name
+				then func tree
+				else defaul
+			(_) -> defaul
+	(_) -> defaul
+
