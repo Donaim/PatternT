@@ -1,5 +1,5 @@
 
-module Types where
+module PatternT.Types where
 
 type Symbol = String
 

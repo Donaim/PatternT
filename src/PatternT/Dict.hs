@@ -1,10 +1,9 @@
 
 -- | Dictionary to use for pattern matching
-module Dict where
+module PatternT.Dict where
 
 import Data.List
-
-import Types
+import PatternT.Types
 
 type Dict k v = [(k, v)]
 

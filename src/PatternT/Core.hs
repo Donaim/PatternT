@@ -1,11 +1,11 @@
 
-module Core where
+module PatternT.Core where
 
 import Data.Maybe
 import Data.Either
-import Types
-import Dict
-import Util
+import PatternT.Types
+import PatternT.Dict
+import PatternT.Util
 
 type BindingDict = Dict String [Tree]
 

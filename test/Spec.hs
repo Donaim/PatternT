@@ -5,11 +5,11 @@ import System.Exit
 import Control.Monad
 import System.IO.Unsafe
 
-import Parsing
-import SimplifyInterface
-import MonadicRules
-import Types
-import Display
+import PatternT.Parsing
+import PatternT.SimplifyInterface
+import PatternT.MonadicRules
+import PatternT.Types
+import PatternT.Display
 
 coms :: [([String], [(String, String)])]
 coms = [

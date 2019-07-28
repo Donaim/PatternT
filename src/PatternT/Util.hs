@@ -1,9 +1,9 @@
 
-module Util where
+module PatternT.Util where
 
 import Text.Read (readMaybe)
 import Debug.Trace
-import Types
+import PatternT.Types
 
 maybeHead :: [a] -> Maybe a
 maybeHead [] = Nothing

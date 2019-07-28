@@ -1,10 +1,10 @@
 
 -- | Ready to use monadic simplification rules
-module MonadicRules where
+module PatternT.MonadicRules where
 
-import Types
-import Util
-import SimplifyInterface
+import PatternT.Types
+import PatternT.Util
+import PatternT.SimplifyInterface
 
 ruleAdd :: String -> Tree -> Maybe Tree
 ruleAdd name t = case t of

@@ -1,9 +1,9 @@
 
-module Display where
+module PatternT.Display where
 
 import Data.List
-import Types
-import Util
+import PatternT.Types
+import PatternT.Util
 
 stringifyTree :: Tree -> String
 stringifyTree t = case t of

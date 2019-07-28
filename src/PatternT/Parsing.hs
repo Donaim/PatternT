@@ -1,4 +1,4 @@
-module Parsing where
+module PatternT.Parsing where
 
 import Text.Read (readMaybe)
 import Data.List
@@ -7,8 +7,8 @@ import Data.Either
 import Data.Char
 import Control.Monad
 
-import Types
-import Util
+import PatternT.Types
+import PatternT.Util
 
 tokenize :: String -> Either ParseError [Expr]
 tokenize s = case rest of

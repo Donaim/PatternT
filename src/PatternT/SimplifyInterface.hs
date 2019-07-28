@@ -1,12 +1,12 @@
 
 -- | Interface with simplification procedures
-module SimplifyInterface where
+module PatternT.SimplifyInterface where
 
 import Data.Either
 
-import Types
-import Core
-import Util
+import PatternT.Types
+import PatternT.Core
+import PatternT.Util
 
 ----------
 -- PURE --
