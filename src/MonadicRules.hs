@@ -6,14 +6,6 @@ import Types
 import Util
 import SimplifyInterface
 
-monadicRuleAdd :: (Monad m) => MonadicSimplify m ctx
-monadicRuleAdd = liftPure name (ruleAdd name)
-	where name = "$add"
-
-monadicRuleMult :: (Monad m) => MonadicSimplify m ctx
-monadicRuleMult = liftPure name (ruleMult name)
-	where name = "$mult"
-
 ruleAdd :: String -> Tree -> Maybe Tree
 ruleAdd name t = case t of
 	Leaf x -> Nothing
