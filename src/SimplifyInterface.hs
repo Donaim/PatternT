@@ -111,7 +111,7 @@ monadicApplyFirstSimplification simplifications ctx t0 = loop simplifications t0
 
 mixedApplyFirstSimplificationWithSimplify :: (Monad m) =>
 	(Tree -> Tree) ->
-	[EitherSimplification m ctx] ->
+	[SimplificationF m ctx] ->
 	ctx ->
 	Tree ->
 	m (Maybe (Tree, Either SimplifyPattern String, ctx))
@@ -120,16 +120,22 @@ mixedApplyFirstSimplificationWithSimplify simplify simplifications ctx t0 = loop
 	loop simplifications t = case simplifications of
 		[] -> return Nothing
 		(simpl : xs) -> case simpl of
-				Left pattern ->
+				Tuple30 pattern ->
 					let r = applyTreeOne (matchAndReplace simplify pattern) t
 					in case r of
 						Just newt -> return $ Just (newt, Left pattern, ctx)
 						Nothing -> loop xs t
 
-				Right (name, func) -> do
+				Tuple31 (name, func) -> do
 					r <- monadicApplyTreeOne (monadicMatchAndReplace name (func ctx)) t
 					case r of
 						Just (newCtx, newt) -> return $ Just (newt, Right name, newCtx)
+						Nothing -> loop xs t
+
+				Tuple32 pure ->
+					let r = applyTreeOne (withFunctionNameCheck Nothing pure) t
+					in case r of
+						Just newt -> return $ Just (newt, Right (fst pure), ctx)
 						Nothing -> loop xs t
 
 mixedApplyFirstSimplificationWithPure :: (Monad m) =>
@@ -138,16 +144,8 @@ mixedApplyFirstSimplificationWithPure :: (Monad m) =>
 	Tree ->
 	m (Maybe (Tree, Either SimplifyPattern String, ctx))
 mixedApplyFirstSimplificationWithPure simplifications ctx t0 =
-		mixedApplyFirstSimplificationWithSimplify simplify eitherSimplifications ctx t0
+		mixedApplyFirstSimplificationWithSimplify simplify simplifications ctx t0
 	where
-	eitherSimplifications = map toEitherF simplifications
-
-	-- toEitherF :: SimplificationF m ctx -> Either SimplifyPattern (MonadicSimplify m ctx) -- Not sure why this type does not work
-	toEitherF simp = case simp of
-		Tuple30 pattern -> Left pattern
-		Tuple31 monadic -> Right monadic
-		Tuple32 (name, pure) -> Right $ liftPure name pure
-
 	simplify :: (Tree -> Tree)
 	simplify = applySimplificationsUntil0LastF firstAggregated
 

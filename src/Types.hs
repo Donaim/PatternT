@@ -63,11 +63,9 @@ data Tuple3 a b c
 -- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the read-write context that is carried around
 type MonadicSimplify m ctx = (String, ctx -> Tree -> m (Maybe (ctx, Tree)))
 
-type EitherSimplification m ctx = Either SimplifyPattern (MonadicSimplify m ctx)
-
 type PureSimplificationF = ((String), (Tree -> Maybe Tree))
 
--- | General simplification possibilities. Basically EitherSimplification + Pure functions
+-- | General simplification possibilities
 type SimplificationF m ctx = Tuple3 SimplifyPattern (MonadicSimplify m ctx) PureSimplificationF
 
 type SimplifyTraceElem = Either SimplifyPattern String
