@@ -1,4 +1,4 @@
-# hacalc  
+# patternt  
 
 Symbolic calculator  
 Reduces expressions using pattern-based rules  
