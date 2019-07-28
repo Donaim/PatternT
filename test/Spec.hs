@@ -251,19 +251,14 @@ rawTokens = map (map tokenize) exprs
 partitionedTokens :: [([ParseError], [[Expr]])]
 partitionedTokens = map partitionEithers rawTokens
 
-treeTokens :: [[[Expr]]]
-treeTokens = map snd partitionedTokens
+okTokens :: [[Expr]]
+okTokens = map ((map Group) . snd) partitionedTokens
 
-trees :: [[Either ParseError Tree]]
-trees = map (map makeTree) treeTokens
-
-partitionedTrees :: [([ParseError], [Tree])]
-partitionedTrees = map partitionEithers trees
+badTokens :: [[ParseError]]
+badTokens = map fst partitionedTokens
 
 okTrees :: [[Tree]]
-okTrees = map snd partitionedTrees
-
-badTrees = map fst partitionedTrees
+okTrees = map (map makeTree) okTokens
 
 okTreesStr :: [[String]]
 okTreesStr = map (map stringifyTree) okTrees
@@ -376,8 +371,8 @@ displays = map display (catMaybes notMatches)
 ----------
 main :: IO ()
 main = do
-	unless (all null badTrees) $ do
-		putStrLn $ "Bad trees:" ++ show badTrees
+	unless (all null badTokens) $ do
+		putStrLn $ "Bad tokens:" ++ show badTokens
 		exitFailure
 	unless (all null badRules) $ do
 		putStrLn $ "Bad rules: " ++ show badRules

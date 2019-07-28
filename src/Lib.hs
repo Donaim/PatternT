@@ -53,19 +53,11 @@ tokenize s = case rest of
 			(c : r) ->
 				tokenize' buffer (cur ++ [c]) r
 
-makeTree :: [Expr] -> Either ParseError Tree
-makeTree exprs = case exprs of
-	[] -> Right $ Branch []
-	[x] -> case x of -- NOTE: tree will not have singleton lists
-		Atom sym -> Right (Leaf sym)
-		Group g -> makeTree g
-	xs ->
-		case bad of
-			[] -> Right (Branch good)
-			(e : es) -> Left e
-		where
-		childs = map (\ y -> makeTree [y]) xs
-		(bad, good) = partitionEithers childs
+makeTree :: Expr -> Tree
+makeTree expr = case expr of
+	Atom sym -> Leaf sym
+	(Group [x]) -> makeTree x
+	(Group g) -> Branch $ map makeTree g
 
 makeTreeWithSingletons :: Expr -> Tree
 makeTreeWithSingletons expr = case expr of
