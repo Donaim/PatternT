@@ -3,9 +3,11 @@ import Data.Either
 import Data.Maybe
 import System.Exit
 import Control.Monad
+import System.IO.Unsafe
 
 import Lib
 import SimplifyInterface
+import MonadicRules
 import Types
 
 coms :: [([String], [(String, String)])]
@@ -187,6 +189,24 @@ coms = [
 	)]
 
 -----------
+-- SETUP --
+-----------
+
+type SimplifyMonad = IO
+type SimplifyCtx = ()
+type MonadicSimplifyT = MonadicSimplify SimplifyMonad SimplifyCtx
+type EitherSimpT = EitherSimplification SimplifyMonad SimplifyCtx
+
+simplifyCtxInitial :: SimplifyCtx
+simplifyCtxInitial = ()
+
+showCtx :: SimplifyCtx -> String
+showCtx = show
+
+unlift :: SimplifyMonad a -> a
+unlift = unsafePerformIO
+
+-----------
 -- RULES --
 -----------
 srules      = map fst coms
@@ -200,6 +220,18 @@ badRules = map fst partitioned
 
 okRulesStr :: [[String]]
 okRulesStr = map (map stringifySimplifyPattern) okRules
+
+monadicRules :: [MonadicSimplifyT]
+monadicRules =
+	[ monadicRuleAdd
+	, monadicRuleMult
+	]
+
+mixedRules :: [[EitherSimpT]]
+mixedRules = map mapf okRules
+	where
+	rightMonadic = map Right monadicRules
+	mapf ruleset = rightMonadic ++ map Left ruleset
 
 -----------------
 -- EXPRESSIONS --
@@ -240,25 +272,47 @@ okTreesStr = map (map stringifyTree) okTrees
 -- SIMPLIFIED --
 ----------------
 
-simplified :: [[(Tree, [(Tree, SimplifyPattern)])]]
-simplified = map simpli (zip okRules okTrees)
+simplified :: [[(Tree, [(Tree, SimplifyTraceElem, SimplifyCtx)])]]
+simplified = unlift simplifiedM
 
-simpli :: ([SimplifyPattern], [Tree]) -> [(Tree, [(Tree, SimplifyPattern)])]
+simplified0 :: [[(Tree, SimplifyMonad [(Tree, SimplifyTraceElem, SimplifyCtx)])]]
+simplified0 = map simpli (zip mixedRules okTrees)
+
+simpli :: ([EitherSimpT], [Tree]) -> [(Tree, SimplifyMonad [(Tree, SimplifyTraceElem, SimplifyCtx)])]
 simpli (rules, trees) =
-	map (\ t -> (t, applySimplificationsUntil0Debug rules t)) trees
+	map (\ t -> (t, mixedApplySimplificationsUntil0Debug rules simplifyCtxInitial t)) trees
 
-simpliString :: [(Tree, [(Tree, SimplifyPattern)])] -> [[(String, String)]]
+simplifiedM :: SimplifyMonad [[(Tree, [(Tree, SimplifyTraceElem, SimplifyCtx)])]]
+simplifiedM = sequence $ map mapf simplified0
+	where
+	mapf :: [(Tree, SimplifyMonad [(Tree, SimplifyTraceElem, SimplifyCtx)])] -> SimplifyMonad [(Tree, [(Tree, SimplifyTraceElem, SimplifyCtx)])]
+	mapf trees = unrolled
+		where
+		mapped :: [SimplifyMonad (Tree, [(Tree, SimplifyTraceElem, SimplifyCtx)])]
+		mapped = map mapf2 trees
+
+		unrolled :: SimplifyMonad [(Tree, [(Tree, SimplifyTraceElem, SimplifyCtx)])]
+		unrolled = sequence mapped
+
+	mapf2 :: (Tree, SimplifyMonad [(Tree, SimplifyTraceElem, SimplifyCtx)]) -> SimplifyMonad (Tree, [(Tree, SimplifyTraceElem, SimplifyCtx)])
+	mapf2 (t, monaded) = do
+		pure <- monaded
+		return (t, pure)
+
+simpliString :: [(Tree, [(Tree, SimplifyTraceElem, SimplifyCtx)])] -> [[(String, String, String)]]
 simpliString trees = map mapone trees
 	where
-	mapone :: (Tree, [(Tree, SimplifyPattern)]) -> [(String, String)]
-	mapone (tree, simplifications) = (stringifyTree tree, "") :
-		map (\ (t, p) -> (stringifyTree t, stringifySimplifyPattern p)) simplifications
+	mapone :: (Tree, [(Tree, SimplifyTraceElem, SimplifyCtx)]) -> [(String, String, String)]
+	mapone (tree, simplifications) =
+		(stringifyTree tree, "", "") :
+			map (\ (t, traceElem, ctx) -> (stringifyTree t, stringifyTraceElem traceElem, showCtx ctx)) simplifications
 
-simplifiedStrings :: [[[(String, String)]]]
+simplifiedStrings :: [[[(String, String, String)]]]
 simplifiedStrings = map simpliString simplified
 
 simplifiedStringsLasts :: [[String]]
-simplifiedStringsLasts = map (map (fst . last)) simplifiedStrings
+simplifiedStringsLasts = map (map (fst3 . last)) simplifiedStrings
+	where fst3 (a, b, c) = a
 
 -----------
 -- MATCH --
@@ -292,9 +346,9 @@ equalMatchQ0 (results, corrects) = map equalMatchQ1 (zip results corrects)
 equalMatchQ1 :: (String, String) -> Maybe (String, String)
 equalMatchQ1 (s1, s2) = if s1 == s2 then Nothing else Just (s1, s2)
 
--------------
--- DISPLAY --
--------------
+-- -------------
+-- -- DISPLAY --
+-- -------------
 
 padLeft :: Char -> Int -> String -> String
 padLeft c n s = s ++ (replicate toappend c)
@@ -315,7 +369,7 @@ displays = map display (catMaybes notMatches)
 		rules = unlines (map ("\t" ++) (okRulesStr !! x))
 		original = ((okTreesStr !! x) !! y)
 		reductions = unlines (map showReduction ((simplifiedStrings !! x) !! y))
-		showReduction (tree, rule) = "\t" ++ (padLeft ' ' 80 tree) ++ " [using] " ++ rule
+		showReduction (tree, rule, ctx) = "\t" ++ (padLeft ' ' 80 tree) ++ " [using] " ++ rule ++ " while ctx = " ++ ctx
 
 ----------
 -- MAIN --

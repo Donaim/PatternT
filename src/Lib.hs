@@ -250,3 +250,8 @@ stringifyCond (LECond a b) = stringifyReplacePart a ++ " <= " ++ stringifyReplac
 stringifySimplifyPattern :: SimplifyPattern -> String
 stringifySimplifyPattern (match, replace, conds) =
 	concat $ intersperse " | " $ [stringifyMatchPart match ++ " -> " ++ stringifyReplacePart replace] ++ (map stringifyCond conds)
+
+stringifyTraceElem :: SimplifyTraceElem -> String
+stringifyTraceElem element = case element of
+	Left pattern -> stringifySimplifyPattern pattern
+	Right name -> "[" ++ name ++ "]"
