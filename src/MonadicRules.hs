@@ -27,18 +27,28 @@ ruleAdd name t = case t of
 	Leaf x -> Nothing
 	(Branch []) -> Nothing
 	(Branch (x : rargs)) -> -- ASSUMPTION: x == name
-		Just $ withOp (+) 0 (Leaf name) rargs
+		differentOrNothing failcase $ withOp (+) 0 failcase rargs
+	where failcase = Leaf name
 
 ruleMult :: String -> Tree -> Maybe Tree
 ruleMult name t = case t of
 	Leaf x -> Nothing
 	(Branch []) -> Nothing
 	(Branch (x : rargs)) -> -- ASSUMPTION: x == name
-		Just $ withOp (*) 1 (Leaf name) rargs
+		differentOrNothing failcase $ withOp (*) 1 failcase rargs
+	where failcase = Leaf name
 
 -----------
 -- UTILS --
 -----------
+
+differentOrNothing :: Tree -> Tree -> Maybe Tree
+differentOrNothing failcase t = case t of
+	(Branch (x : xs)) ->
+		if x == failcase
+		then Nothing
+		else Just t
+	(_) -> Just t
 
 numCast :: [Tree] -> [Either Tree Number]
 numCast = map mapf
