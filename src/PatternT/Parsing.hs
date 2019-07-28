@@ -29,13 +29,6 @@ tokenize s = case rest of
 				then (buffer, r)
 				else (Atom cur : buffer, r)
 
-			(' ' : r) -> tokenize' newBuffer "" r
-				where
-				exp = Atom cur
-				newBuffer =
-					if null cur
-					then buffer
-					else exp : buffer
 			('(' : r) -> tokenize' newBuffer "" rest
 				where
 				exp = Atom cur
@@ -46,7 +39,15 @@ tokenize s = case rest of
 					then g : buffer
 					else g : exp : buffer
 			(c : r) ->
-				tokenize' buffer (cur ++ [c]) r
+				if isSpace c
+				then tokenize' newBuffer "" r
+				else tokenize' buffer (cur ++ [c]) r
+				where
+				exp = Atom cur
+				newBuffer =
+					if null cur
+					then buffer
+					else exp : buffer
 
 makeTree :: Expr -> Tree
 makeTree expr = case expr of
