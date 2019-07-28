@@ -122,23 +122,7 @@ mixedApplyFirstSimplificationWithPure :: (Monad m) =>
 	Tree ->
 	m (Maybe (Tree, Either SimplifyPattern String, ctx))
 mixedApplyFirstSimplificationWithPure simplifications ctx t0 =
-		mixedApplyFirstSimplificationWithSimplify simplify simplifications ctx t0
-	where
-	simplify :: (Tree -> Tree)
-	simplify = applySimplificationsUntil0LastF firstAggregated
-
-	firstAggregated :: (Tree -> Maybe Tree)
-	firstAggregated = applyFirstSimplificationF (collectSimplify simplifications)
-
-	applyPattern :: SimplifyPattern -> (Tree -> Maybe Tree)
-	applyPattern pattern = applyTreeOne (matchAndReplace simplify pattern)
-
-	collectSimplify :: [SimplificationF m ctx] -> [(Tree -> Maybe Tree)]
-	collectSimplify [] = []
-	collectSimplify (f : fs) = case f of
-		Tuple30 pattern -> (applyPattern pattern) : collectSimplify fs
-		Tuple31 {} -> collectSimplify fs
-		Tuple32 pure -> (withFunctionNameCheck Nothing pure) : collectSimplify fs
+		mixedApplyFirstSimplificationWithSimplify (makePureSimplify simplifications) simplifications ctx t0
 
 -----------
 -- LOOPS --
@@ -158,6 +142,7 @@ mixedApplySimplificationsWithPureUntil0Debug :: (Monad m) =>
 	m [(Tree, Either SimplifyPattern String, ctx)]
 mixedApplySimplificationsWithPureUntil0Debug simplifications ctx0 t0 = loop simplifications ctx0 t0
 	where
+	pureSimplify = makePureSimplify simplifications
 	loop simplifications ctx t = do
 		r <- mixedApplyFirstSimplificationWithPure simplifications ctx t
 		case r of
@@ -192,3 +177,22 @@ withFunctionNameCheck defaul (name, func) tree = case tree of -- NOTE: in simpli
 			(_) -> defaul
 	(_) -> defaul
 
+-- | Using mixed rules, take pure ones and make a simplify function to use in Conditionals
+makePureSimplify :: (Monad m) => [SimplificationF m ctx] -> (Tree -> Tree)
+makePureSimplify simplifications = simplify
+	where
+	simplify :: (Tree -> Tree)
+	simplify = applySimplificationsUntil0LastF firstAggregated
+
+	firstAggregated :: (Tree -> Maybe Tree)
+	firstAggregated = applyFirstSimplificationF (collectSimplify simplifications)
+
+	applyPattern :: SimplifyPattern -> (Tree -> Maybe Tree)
+	applyPattern pattern = applyTreeOne (matchAndReplace simplify pattern)
+
+	collectSimplify :: [SimplificationF m ctx] -> [(Tree -> Maybe Tree)]
+	collectSimplify [] = []
+	collectSimplify (f : fs) = case f of
+		Tuple30 pattern -> (applyPattern pattern) : collectSimplify fs
+		Tuple31 {} -> collectSimplify fs
+		Tuple32 pure -> (withFunctionNameCheck Nothing pure) : collectSimplify fs
