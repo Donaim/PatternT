@@ -37,6 +37,17 @@ tokenize s = case rest of
 				if null cur
 				then g : buffer
 				else g : exp : buffer
+
+		('\"' : r) -> loop newBuffer "" rest
+			where
+			exp = Atom cur
+			(quoted, rest) = takeQuoted r
+			q = Atom quoted
+			newBuffer =
+				if null cur
+				then q : buffer
+				else q : exp : buffer
+
 		(c : r) ->
 			if isSpace c
 			then loop newBuffer "" r
@@ -47,6 +58,25 @@ tokenize s = case rest of
 				if null cur
 				then buffer
 				else exp : buffer
+
+takeQuoted :: String -> (String, String)
+takeQuoted str = loop False [] str
+	where
+	loop escaped buf str = case str of
+		"" -> (reverse buf, "")
+
+		('\\' : xs) -> loop (not escaped) newbuf xs
+			where newbuf = if escaped then '\\' : buf else buf
+
+		('\"' : xs) ->
+			if escaped
+			then loop (not escaped) ('\"' : buf) xs
+			else (reverse buf, xs)
+
+		(x : xs) ->
+			if escaped
+			then loop False (x : '\\' : buf) xs
+			else loop False (x : buf) xs
 
 makeTree :: Expr -> Tree
 makeTree expr = case expr of
