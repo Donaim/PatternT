@@ -129,17 +129,6 @@ mixedApplyFirstSimplificationWithSimplify simplify simplifications ctx t0 = loop
 						Just (newCtx, newt) -> return $ Just (newt, Right name, newCtx)
 						Nothing -> loop xs t
 
-mixedApplyFirstSimplification :: (Monad m) =>
-	[EitherSimplification m ctx] ->
-	ctx ->
-	Tree ->
-	m (Maybe (Tree, Either SimplifyPattern String, ctx))
-mixedApplyFirstSimplification simplifications ctx t0 =
-		mixedApplyFirstSimplificationWithSimplify simplify simplifications ctx t0
-	where
-	onlyPure = fst $ partitionEithers simplifications
-	simplify = applySimplificationsUntil0Last onlyPure
-
 mixedApplyFirstSimplificationWithPure :: (Monad m) =>
 	[SimplificationF m ctx] ->
 	ctx ->
@@ -182,21 +171,6 @@ applySimplificationsUntil0Debug patterns0 t0 = loop patterns0 t0
 	loop patterns t = case applyFirstSimplification patterns t of
 		Nothing -> []
 		Just (newt, rule) -> (newt, rule) : loop patterns newt
-
-mixedApplySimplificationsUntil0Debug :: (Monad m) =>
-	[EitherSimplification m ctx] ->
-	ctx ->
-	Tree ->
-	m [(Tree, Either SimplifyPattern String, ctx)]
-mixedApplySimplificationsUntil0Debug simplifications ctx0 t0 = loop simplifications ctx0 t0
-	where
-	loop simplifications ctx t = do
-		r <- mixedApplyFirstSimplification simplifications ctx t
-		case r of
-			Nothing -> return []
-			Just (newt, rule, newCtx) -> do
-				next <- loop simplifications newCtx newt
-				return $ (newt, rule, newCtx) : next
 
 mixedApplySimplificationsWithPureUntil0Debug :: (Monad m) =>
 	[SimplificationF m ctx] ->
