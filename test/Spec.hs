@@ -41,6 +41,7 @@ coms = [
 		, "<2 x -> false | (x * x) != x"
 		, "x % #y -> y | x !> #k"
 		, "\"one two\" -> \"one-two\""
+		, "'two  tree' -> \"two-tree\""
 		]
 	,
 		[ ("1 + 1",                                            "2")
@@ -53,6 +54,7 @@ coms = [
 		, ("a % 5",                                            "5")
 		, ("4 % 5",                                            "(4 % 5)")
 		, ("\"one two\" % b",                                  "(one-two % b)")
+		, ("\"two  tree\" % b",                                  "(two-tree % b)")
 		]
 	),
 	(

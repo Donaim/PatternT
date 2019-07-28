@@ -38,29 +38,28 @@ tokenize s = case rest of
 				then g : buffer
 				else g : exp : buffer
 
-		('\"' : r) -> loop newBuffer "" rest
+		(c : r) ->
+			if c == '\"' || c == '\''
+			then loop qbuffer "" qrest
+			else
+				if isSpace c
+				then loop spaceBuffer "" r
+				else loop buffer (cur ++ [c]) r
 			where
 			exp = Atom cur
-			(quoted, rest) = takeQuoted r
+			spaceBuffer =
+				if null cur
+				then buffer
+				else exp : buffer
+			(quoted, qrest) = takeQuoted c r
 			q = Atom quoted
-			newBuffer =
+			qbuffer =
 				if null cur
 				then q : buffer
 				else q : exp : buffer
 
-		(c : r) ->
-			if isSpace c
-			then loop newBuffer "" r
-			else loop buffer (cur ++ [c]) r
-			where
-			exp = Atom cur
-			newBuffer =
-				if null cur
-				then buffer
-				else exp : buffer
-
-takeQuoted :: String -> (String, String)
-takeQuoted str = loop False [] str
+takeQuoted :: Char -> String -> (String, String)
+takeQuoted qchar str = loop False [] str
 	where
 	loop escaped buf str = case str of
 		"" -> (reverse buf, "")
@@ -68,15 +67,14 @@ takeQuoted str = loop False [] str
 		('\\' : xs) -> loop (not escaped) newbuf xs
 			where newbuf = if escaped then '\\' : buf else buf
 
-		('\"' : xs) ->
-			if escaped
-			then loop (not escaped) ('\"' : buf) xs
-			else (reverse buf, xs)
-
 		(x : xs) ->
-			if escaped
-			then loop False (x : '\\' : buf) xs
-			else loop False (x : buf) xs
+			if x == qchar
+			then if escaped
+				then loop (not escaped) (qchar : buf) xs
+				else (reverse buf, xs)
+			else if escaped
+				then loop False (x : '\\' : buf) xs
+				else loop False (x : buf) xs
 
 makeTree :: Expr -> Tree
 makeTree expr = case expr of
