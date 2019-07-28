@@ -85,38 +85,26 @@ parseMatch text = do
 			[] -> [beforePipe]
 			(_) -> beforePipe : betweenPipesF afterPipe
 
-eitherAlternative :: [Either a b] -> Either a b -> Either a b
-eitherAlternative [] defaul = defaul
-eitherAlternative (x : xs) defaul = case x of
-	Left e -> eitherAlternative xs defaul
-	Right x -> Right x
-
 parseCond :: String -> Either ParseMatchError Conditional
-parseCond text = eitherAlternative
-	[ eqTry
-	, neqTry
-	, ltTry
-	, leTry
-	]
+parseCond text = swapEither $ do
+	tryTwoReplacements "==" EqCond
+	tryTwoReplacements "!=" NeqCond
+	tryTwoReplacements "<" LTCond
+	tryTwoReplacements "<=" LECond
 	matchTry
 
 	where
-	eqTry = tryTwoReplacements "==" EqCond
-	neqTry = tryTwoReplacements "!=" NeqCond
-	ltTry = tryTwoReplacements "<" LTCond
-	leTry = tryTwoReplacements "<=" LECond
-
-	tryTwoReplacements :: String -> (PatternReplacePart -> PatternReplacePart -> Conditional) -> Either ParseMatchError Conditional
+	tryTwoReplacements :: String -> (PatternReplacePart -> PatternReplacePart -> Conditional) -> Either Conditional ParseMatchError
 	tryTwoReplacements key constructor = case partitionString key text of
-		(left, [], right) -> Left $ CondExpected text
-		(left, eq, right) -> do
+		(left, [], right) -> Right $ CondExpected text
+		(left, eq, right) -> swapEither $ do
 			rleft <- parseReplacePart left
 			rright <- parseReplacePart right
 			return (constructor rleft rright)
 
 	matchTry = case partitionString "!>" text of
-		(left, [], right) -> Left $ CondExpected text
-		(left, eq, right) -> do
+		(left, [], right) -> Right $ CondExpected text
+		(left, eq, right) -> swapEither $ do
 			rleft <- parseReplacePart left
 			rright <- parseMatchPart right
 			return (NotmatchCond rleft rright)

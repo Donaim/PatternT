@@ -9,6 +9,11 @@ maybeHead :: [a] -> Maybe a
 maybeHead [] = Nothing
 maybeHead (x : xs) = Just x
 
+swapEither :: Either a b -> Either b a
+swapEither e = case e of
+	Left a -> Right a
+	Right b -> Left b
+
 -- | Strip all trailing zeroes
 showNoZeroes :: (Show a) => a -> String
 showNoZeroes x = if anydotq then striped else s
