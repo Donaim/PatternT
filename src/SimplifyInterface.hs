@@ -183,21 +183,6 @@ applySimplificationsUntil0Debug patterns0 t0 = loop patterns0 t0
 		Nothing -> []
 		Just (newt, rule) -> (newt, rule) : loop patterns newt
 
-monadicApplySimplificationsUntil0Debug :: (Monad m) =>
-	[MonadicSimplify m ctx] ->
-	ctx ->
-	Tree ->
-	m [(Tree, String, ctx)]
-monadicApplySimplificationsUntil0Debug simplifications ctx0 t0 = loop simplifications ctx0 t0
-	where
-	loop simplifications ctx t = do
-		r <- monadicApplyFirstSimplification simplifications ctx t
-		case r of
-			Nothing -> return []
-			Just (newt, ruleName, newCtx) -> do
-				next <- loop simplifications newCtx newt
-				return $ (newt, ruleName, newCtx) : next
-
 mixedApplySimplificationsUntil0Debug :: (Monad m) =>
 	[EitherSimplification m ctx] ->
 	ctx ->
