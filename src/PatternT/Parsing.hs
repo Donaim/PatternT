@@ -15,39 +15,38 @@ tokenize s = case rest of
 	[] -> Right $ reverse exprs
 	xs -> Left $ FreeTokensAfterClose xs
 	where
-	(exprs, rest) = tokenize' [] "" s
+	(exprs, rest) = loop [] "" s
 
-	tokenize' :: [Expr] -> String -> String -> ([Expr], String)
-	tokenize' buffer cur text =
-		case text of
-			"" ->
-				if null cur
-				then (buffer, "")
-				else (Atom cur : buffer, "")
-			(')' : r) ->
-				if null cur
-				then (buffer, r)
-				else (Atom cur : buffer, r)
+	loop :: [Expr] -> String -> String -> ([Expr], String)
+	loop buffer cur text = case text of
+		"" ->
+			if null cur
+			then (buffer, "")
+			else (Atom cur : buffer, "")
+		(')' : r) ->
+			if null cur
+			then (buffer, r)
+			else (Atom cur : buffer, r)
 
-			('(' : r) -> tokenize' newBuffer "" rest
-				where
-				exp = Atom cur
-				(inBrackets, rest) = tokenize' [] "" r
-				g = Group (reverse inBrackets)
-				newBuffer =
-					if null cur
-					then g : buffer
-					else g : exp : buffer
-			(c : r) ->
-				if isSpace c
-				then tokenize' newBuffer "" r
-				else tokenize' buffer (cur ++ [c]) r
-				where
-				exp = Atom cur
-				newBuffer =
-					if null cur
-					then buffer
-					else exp : buffer
+		('(' : r) -> loop newBuffer "" rest
+			where
+			exp = Atom cur
+			(inBrackets, rest) = loop [] "" r
+			g = Group (reverse inBrackets)
+			newBuffer =
+				if null cur
+				then g : buffer
+				else g : exp : buffer
+		(c : r) ->
+			if isSpace c
+			then loop newBuffer "" r
+			else loop buffer (cur ++ [c]) r
+			where
+			exp = Atom cur
+			newBuffer =
+				if null cur
+				then buffer
+				else exp : buffer
 
 makeTree :: Expr -> Tree
 makeTree expr = case expr of
