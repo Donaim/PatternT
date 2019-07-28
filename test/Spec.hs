@@ -42,6 +42,10 @@ coms = [
 		, "x % #y -> y | x !> #k"
 		, "\"one two\" -> \"one-two\""
 		, "'two  tree' -> \"two-tree\""
+		, "(a -> b) -> b"
+		, "| -> pipe | 0 == 0"
+		, "(->) -> arrow"
+		-- , "-> -> arrow" -- FAILING: by design
 		]
 	,
 		[ ("1 + 1",                                            "2")
@@ -54,7 +58,10 @@ coms = [
 		, ("a % 5",                                            "5")
 		, ("4 % 5",                                            "(4 % 5)")
 		, ("\"one two\" % b",                                  "(one-two % b)")
-		, ("\"two  tree\" % b",                                  "(two-tree % b)")
+		, ("\"two  tree\" % b",                                "(two-tree % b)")
+		, ("(a -> b) -> c",                                      "c")
+		, ("|",                                                "pipe")
+		, ("->",                                                "arrow")
 		]
 	),
 	(

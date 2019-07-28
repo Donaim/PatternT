@@ -88,33 +88,38 @@ makeTreeWithSingletons expr = case expr of
 	Group g -> Branch $ map makeTreeWithSingletons g
 
 parseMatch :: String -> Either ParseMatchError SimplifyPattern
-parseMatch text = do
+parseMatch text = case tokenize text of
+	Left e -> Left $ TokenizeError e
+	Right exprs -> withExprs exprs
+
+	where
+	withExprs exprs = do
 		replacePart <- maybe (Left $ SplitFailed betweenPipes) Right (maybeHead betweenPipes)
 		unless (null badConds) (Left $ head badConds)
 
-		match <- parseMatchPart beforeArrow
-		replace <- parseReplacePart replacePart
+		match <- parseMatchPart' beforeArrow
+		replace <- parseReplacePart' replacePart
 
 		return (match, replace, goodConds)
 
-	where
-	(beforeArrow, _, afterArrow) = partitionString "->" text
+		where
+		(beforeArrow, _, afterArrow) = partitionExpr "->" exprs
 
-	goodConds = snd partitionedBetween
-	badConds = fst partitionedBetween
+		goodConds = snd partitionedBetween
+		badConds = fst partitionedBetween
 
-	partitionedBetween = partitionEithers mappedBetween
-	mappedBetween = map parseCond (tail betweenPipes)
-	betweenPipes = betweenPipesF afterArrow
+		partitionedBetween = partitionEithers mappedBetween
+		mappedBetween = map parseCond' (tail betweenPipes)
+		betweenPipes = betweenPipesF afterArrow
 
-	betweenPipesF :: String -> [String]
-	betweenPipesF s = let (beforePipe, pipe, afterPipe) = partitionString "|" s
-		in case pipe of
-			[] -> [beforePipe]
-			(_) -> beforePipe : betweenPipesF afterPipe
+		betweenPipesF :: [Expr] -> [[Expr]]
+		betweenPipesF exprs = let (beforePipe, pipe, afterPipe) = partitionExpr "|" exprs
+			in case pipe of
+				Nothing -> [beforePipe]
+				(_) -> beforePipe : betweenPipesF afterPipe
 
-parseCond :: String -> Either ParseMatchError Conditional
-parseCond text = swapEither $ do
+parseCond' :: [Expr] -> Either ParseMatchError Conditional
+parseCond' exprs = swapEither $ do
 	tryTwoReplacements "==" EqCond
 	tryTwoReplacements "!=" NeqCond
 	tryTwoReplacements "<" LTCond
@@ -123,40 +128,46 @@ parseCond text = swapEither $ do
 
 	where
 	tryTwoReplacements :: String -> (PatternReplacePart -> PatternReplacePart -> Conditional) -> Either Conditional ParseMatchError
-	tryTwoReplacements key constructor = case partitionString key text of
-		(left, [], right) -> Right $ CondExpected text
-		(left, eq, right) -> swapEither $ do
-			rleft <- parseReplacePart left
-			rright <- parseReplacePart right
+	tryTwoReplacements key constructor = case partitionExpr key exprs of
+		(left, Nothing, right) -> Right $ CondExpected exprs
+		(left, Just eq, right) -> swapEither $ do
+			rleft <- parseReplacePart' left
+			rright <- parseReplacePart' right
 			return (constructor rleft rright)
 
-	matchTry = case partitionString "!>" text of
-		(left, [], right) -> Right $ CondExpected text
-		(left, eq, right) -> swapEither $ do
-			rleft <- parseReplacePart left
-			rright <- parseMatchPart right
+	matchTry = case partitionExpr "!>" exprs of
+		(left, Nothing, right) -> Right $ CondExpected exprs
+		(left, Just eq, right) -> swapEither $ do
+			rleft <- parseReplacePart' left
+			rright <- parseMatchPart' right
 			return (NotmatchCond rleft rright)
 
-partitionString :: String -> String -> (String, String, String)
-partitionString break s =
-	if breakIndex < 0
-	then (s, "", "")
-	else (take breakIndex s, break, drop (length break) after)
+partitionExpr :: String -> [Expr] -> ([Expr], Maybe Expr, [Expr])
+partitionExpr break exprs =
+	case mfound of
+		Nothing -> (exprs, Nothing, [])
+		Just b -> (take breakIndex exprs, Just b, after)
 
 	where
-	(after, breakIndex) = afterBreak break 0 s
+	(after, mfound, breakIndex) = afterBreak break 0 exprs
 
-	afterBreak :: String -> Int -> String -> (String, Int)
-	afterBreak break pos [] = ("", -1)
-	afterBreak break pos str =
-		if isPrefixOf break str
-		then (str, pos)
-		else afterBreak break (pos + 1) (tail str)
+	afterBreak :: String -> Int -> [Expr] -> ([Expr], Maybe Expr, Int)
+	afterBreak break pos [] = ([], Nothing, -1)
+	afterBreak break pos (x : xs) = case x of
+		(Atom s) ->
+			if s == break
+			then (xs, Just x, pos)
+			else next
+		(Group leafs) -> next
+		where next = afterBreak break (pos + 1) xs
 
 parseMatchPart :: String -> Either ParseMatchError PatternMatchPart
 parseMatchPart text = case tokenize text of
 		Left e -> Left $ TokenizeError e
 		Right ts -> exprToMatchPattern (Group ts)
+
+parseMatchPart' :: [Expr] -> Either ParseMatchError PatternMatchPart
+parseMatchPart' exprs = exprToMatchPattern (Group exprs)
 
 exprToMatchPattern :: Expr -> Either ParseMatchError PatternMatchPart
 exprToMatchPattern t = case t of
@@ -195,6 +206,9 @@ parseReplacePart :: String -> Either ParseMatchError PatternReplacePart
 parseReplacePart text = case tokenize text of
 		Left e -> Left $ TokenizeError e
 		Right ts -> Right $ exprToReplacePattern (Group ts)
+
+parseReplacePart' :: [Expr] -> Either ParseMatchError PatternReplacePart
+parseReplacePart' exprs = Right $ exprToReplacePattern (Group exprs)
 
 exprToReplacePattern :: Expr -> PatternReplacePart
 exprToReplacePattern t = case t of

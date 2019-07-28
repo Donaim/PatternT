@@ -48,8 +48,8 @@ type SimplifyPattern = (PatternMatchPart, PatternReplacePart, [Conditional])
 
 data ParseMatchError
 	= Unknown String
-	| SplitFailed [String]
-	| CondExpected String
+	| SplitFailed [[Expr]]
+	| CondExpected [Expr]
 	| ExpectedClosingBracket String
 	| MatchEmptyTreeError
 	| TokenizeError ParseError
