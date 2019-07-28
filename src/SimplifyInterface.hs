@@ -33,6 +33,15 @@ applyFirstSimplification patterns t0 = loop patterns t0
 			Just newt -> Just (newt, x)
 			Nothing -> loop xs t
 
+applyFirstSimplificationF :: [Tree -> Maybe Tree] -> Tree -> Maybe Tree
+applyFirstSimplificationF funcs t0 = loop funcs t0
+	where
+	loop funcs t = case funcs of
+		[] -> Nothing
+		(f : fs) -> case f t of
+			Just newt -> Just newt
+			Nothing -> loop fs t
+
 applySimplificationsUntil0Last :: [SimplifyPattern] -> Tree -> Tree
 applySimplificationsUntil0Last patterns0 t0 = loop patterns0 t0
 	where
@@ -97,16 +106,14 @@ monadicApplyFirstSimplification simplifications ctx t0 = loop simplifications t0
 -- MIXED --
 -----------
 
-mixedApplyFirstSimplification :: (Monad m) =>
+mixedApplyFirstSimplificationWithSimplify :: (Monad m) =>
+	(Tree -> Tree) ->
 	[EitherSimplification m ctx] ->
 	ctx ->
 	Tree ->
 	m (Maybe (Tree, Either SimplifyPattern String, ctx))
-mixedApplyFirstSimplification simplifications ctx t0 = loop simplifications t0
+mixedApplyFirstSimplificationWithSimplify simplify simplifications ctx t0 = loop simplifications t0
 	where
-	onlyPure = fst $ partitionEithers simplifications
-	simplify = applySimplificationsUntil0Last onlyPure
-
 	loop simplifications t = case simplifications of
 		[] -> return Nothing
 		(simpl : xs) -> case simpl of
@@ -121,6 +128,49 @@ mixedApplyFirstSimplification simplifications ctx t0 = loop simplifications t0
 					case r of
 						Just (newCtx, newt) -> return $ Just (newt, Right name, newCtx)
 						Nothing -> loop xs t
+
+mixedApplyFirstSimplification :: (Monad m) =>
+	[EitherSimplification m ctx] ->
+	ctx ->
+	Tree ->
+	m (Maybe (Tree, Either SimplifyPattern String, ctx))
+mixedApplyFirstSimplification simplifications ctx t0 =
+		mixedApplyFirstSimplificationWithSimplify simplify simplifications ctx t0
+	where
+	onlyPure = fst $ partitionEithers simplifications
+	simplify = applySimplificationsUntil0Last onlyPure
+
+mixedApplyFirstSimplificationWithPure :: (Monad m) =>
+	[SimplificationF m ctx] ->
+	ctx ->
+	Tree ->
+	m (Maybe (Tree, Either SimplifyPattern String, ctx))
+mixedApplyFirstSimplificationWithPure simplifications ctx t0 =
+		mixedApplyFirstSimplificationWithSimplify simplify eitherSimplifications ctx t0
+	where
+	eitherSimplifications = map toEitherF simplifications
+
+	-- toEitherF :: SimplificationF m ctx -> Either SimplifyPattern (MonadicSimplify m ctx) -- Not sure why this type does not work
+	toEitherF simp = case simp of
+		Tuple30 pattern -> Left pattern
+		Tuple31 monadic -> Right monadic
+		Tuple32 (name, pure) -> Right $ liftPure name pure
+
+	simplify :: (Tree -> Tree)
+	simplify = applySimplificationsUntil0LastF firstAggregated
+
+	firstAggregated :: (Tree -> Maybe Tree)
+	firstAggregated = applyFirstSimplificationF (collectSimplify simplifications)
+
+	applyPattern :: SimplifyPattern -> (Tree -> Maybe Tree)
+	applyPattern pattern = applyTreeOne (matchAndReplace simplify pattern)
+
+	collectSimplify :: [SimplificationF m ctx] -> [(Tree -> Maybe Tree)]
+	collectSimplify [] = []
+	collectSimplify (f : fs) = case f of
+		Tuple30 pattern -> (applyPattern pattern) : collectSimplify fs
+		Tuple31 {} -> collectSimplify fs
+		Tuple32 (name, func) -> func : collectSimplify fs
 
 -----------
 -- LOOPS --

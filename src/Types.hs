@@ -55,9 +55,17 @@ data ParseMatchError
 	| TokenizeError ParseError
 	deriving (Eq, Show, Read)
 
+data Tuple3 a b c
+	= Tuple30 a
+	| Tuple31 b
+	| Tuple32 c
+
 -- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the read-write context that is carried around
 type MonadicSimplify m ctx = (String, ctx -> Tree -> m (Maybe (ctx, Tree)))
 
 type EitherSimplification m ctx = Either SimplifyPattern (MonadicSimplify m ctx)
+
+-- | General simplification possibilities. Basically EitherSimplification + Pure functions
+type SimplificationF m ctx = Tuple3 SimplifyPattern (MonadicSimplify m ctx) ((String), (Tree -> Maybe Tree))
 
 type SimplifyTraceElem = Either SimplifyPattern String
