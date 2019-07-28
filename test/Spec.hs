@@ -51,7 +51,7 @@ coms = [
 		[ ("1 + 1",                                            "2")
 		, ("1 + 2",                                            "(1 + 2)")
 		, ("2 * a",                                            "($mult 2 a)")
-		, ("<2 0",                                             "true") -- FAILING because I cannot use * and + in conditionals :( TODO: fix this
+		, ("<2 0",                                             "true")
 		, ("<2 1",                                             "true")
 		, ("<2 3",                                             "false")
 		, ("(1 + 1) * a",                                      "($mult 2 a)")
