@@ -7,24 +7,22 @@ import PatternT.Util
 import PatternT.SimplifyInterface
 
 ruleAdd :: String -> Tree -> Maybe Tree
-ruleAdd name t = case t of
-	Leaf x -> Nothing
-	(Branch []) -> Nothing
-	(Branch (x : rargs)) -> -- ASSUMPTION: x == name
-		differentOrNothing failcase $ withOp (+) failcase rargs
-	where failcase = Leaf name
+ruleAdd = stdNumberRule (+)
 
 ruleMult :: String -> Tree -> Maybe Tree
-ruleMult name t = case t of
-	Leaf x -> Nothing
-	(Branch []) -> Nothing
-	(Branch (x : rargs)) -> -- ASSUMPTION: x == name
-		differentOrNothing failcase $ withOp (*) failcase rargs
-	where failcase = Leaf name
+ruleMult = stdNumberRule (*)
 
 -----------
 -- UTILS --
 -----------
+
+stdNumberRule :: (Number -> Number -> Number) -> String -> Tree -> Maybe Tree
+stdNumberRule op name t = case t of
+	Leaf x -> Nothing
+	(Branch []) -> Nothing
+	(Branch (x : rargs)) -> -- ASSUMPTION: x == name
+		differentOrNothing failcase $ withOp op failcase rargs
+	where failcase = Leaf name
 
 differentOrNothing :: Tree -> Tree -> Maybe Tree
 differentOrNothing failcase t = case t of
