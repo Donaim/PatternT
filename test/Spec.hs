@@ -243,6 +243,9 @@ pureRules :: [PureSimplificationF]
 pureRules =
 	[ ("$add", ruleAdd "$add")
 	, ("$mult", ruleMult "$mult")
+	, ("$sub", ruleSub "$sub")
+	, ("$div", ruleDiv "$div")
+	, ("$pow", rulePow "$pow")
 	]
 
 mixedRules :: [[SimlifyFT]]

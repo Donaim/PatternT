@@ -12,9 +12,21 @@ ruleAdd = stdNumberRule (+)
 ruleMult :: String -> Tree -> Maybe Tree
 ruleMult = stdNumberRule (*)
 
+ruleSub :: String -> Tree -> Maybe Tree
+ruleSub = stdNumberRule (-)
+
+ruleDiv :: String -> Tree -> Maybe Tree
+ruleDiv = stdNumberRule (/)
+
+rulePow :: String -> Tree -> Maybe Tree
+rulePow = stdNumberRule rationalPow
+
 -----------
 -- UTILS --
 -----------
+
+rationalPow :: Number -> Number -> Number
+rationalPow a b = toRational $ (fromRational a) ** (fromRational b)
 
 stdNumberRule :: (Number -> Number -> Number) -> String -> Tree -> Maybe Tree
 stdNumberRule op name t = case t of
