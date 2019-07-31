@@ -24,11 +24,11 @@ showNoZeroes x = if anydotq then striped else s
 		striped = reverse $ (dropWhile (== '.') . dropWhile (== '0')) r
 
 numToTree :: Number -> Tree
-numToTree x = Leaf (showNoZeroes x)
+numToTree x = Leaf (showNoZeroes (fromRational x :: Double))
 
 symbolToMaybeNum :: Symbol -> Maybe Number
-symbolToMaybeNum s = case readMaybe s :: Maybe Number of
-	Just x -> Just x
+symbolToMaybeNum s = case readMaybe s :: Maybe Double of
+	Just x -> Just (toRational x)
 	Nothing -> Nothing
 
 treeToMaybeNum :: Tree -> Maybe Number
