@@ -114,8 +114,8 @@ matchGroups dict ps [] = Nothing -- Size should be equal
 matchGroups dict (p : ps) (t : ts) = case p of
 	(VaradicMatch bindName) ->
 		case followingExactMatches of
-			[] -> Just $ bindingAdd dict bindName (t : ts) ++ followingVaradictMatches
-
+			[] ->
+				Just $ bindingAdd dict bindName (t : ts) ++ followingVaradictMatches
 			ms ->
 				let (varadicMatched, rest) = varadicUntilExact ms [] (t : ts)
 				in let newDict = bindingAdd dict bindName varadicMatched
