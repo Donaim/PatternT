@@ -66,6 +66,7 @@ coms = [
 		, ("->",                                                "arrow")
 		, ("x x (1 2 3) y y",                                  "(match1 (x x) (y y))")
 		, ("a & d & & k",                                      "&")
+		-- , ("($sub ($add ($div 1 1000) 1) ($div 1 1000)))",     "1") -- FAILING: show & read of double is not good..
 		]
 	),
 	(
