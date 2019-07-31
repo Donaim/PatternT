@@ -46,6 +46,7 @@ coms = [
 		, "| -> pipe | 0 == 0"
 		, "(->) -> arrow"
 		-- , "-> -> arrow" -- FAILING: by design
+		, "{ys} (a b c) {xs} -> match1 ({ys}) ({xs})"
 		]
 	,
 		[ ("1 + 1",                                            "2")
@@ -62,6 +63,7 @@ coms = [
 		, ("(a -> b) -> c",                                      "c")
 		, ("|",                                                "pipe")
 		, ("->",                                                "arrow")
+		, ("x x (1 2 3) y y",                                  "(match1 (x x) (y y))")
 		]
 	),
 	(
