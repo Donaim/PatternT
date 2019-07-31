@@ -113,11 +113,11 @@ matchGroups dict [] ts = Nothing -- Size should be equal
 matchGroups dict ps [] = Nothing -- Size should be equal
 matchGroups dict (p : ps) (t : ts) = case p of
 	(VaradicMatch bindName) ->
-		case maybeFollowingNameMatch of
+		case maybeFollowingExactMatch ps of
 			Nothing -> Just $ bindingAdd dict bindName (t : ts) ++ followingVaradictMatches
 
-			Just nameMatch ->
-				let (varadicMatched, rest) = varadicUntilName nameMatch [] (t : ts)
+			Just m ->
+				let (varadicMatched, rest) = varadicUntilExact m [] (t : ts)
 				in let newDict = bindingAdd dict bindName varadicMatched
 					in matchGroups newDict ps rest
 
@@ -136,26 +136,24 @@ matchGroups dict (p : ps) (t : ts) = case p of
 				(VaradicMatch bindName) -> (bindName, []) : loop xs
 				(_) -> loop xs
 
-		maybeFollowingNameMatch =
-			case filter isNameMatch ps of
-				((NameMatch s) : rest) -> Just s
-				(_) -> Nothing
+		maybeFollowingExactMatch patterns = case patterns of
+			(x : xs) -> case x of
+				(NameMatch {}) -> Just x
+				(MatchGroup {}) -> Just x
+				(_) -> maybeFollowingExactMatch xs
+			[] -> Nothing
 
-		isNameMatch x = case x of
-			(NameMatch {}) -> True
-			(_) -> False
-
-		varadicUntilName :: String -> [Tree] -> [Tree] -> ([Tree], [Tree])
-		varadicUntilName nameMatch buf trees =
+		varadicUntilExact :: PatternMatchPart -> [Tree] -> [Tree] -> ([Tree], [Tree])
+		varadicUntilExact match buf trees =
 			case trees of
 				[] -> break
 				(t : ts) -> case t of
-					(Leaf s) ->
-						if s == nameMatch
-						then break
-						else continue
+					(Branch xs) ->
+						case matchGetDict match t of
+							Just dict -> break
+							Nothing -> continue
 					(_) -> continue
-					where continue = varadicUntilName nameMatch (t : buf) ts
+					where continue = varadicUntilExact match (t : buf) ts
 			where break = (reverse buf, trees)
 
 ---------------
