@@ -147,13 +147,9 @@ matchGroups dict (p : ps) (t : ts) = case p of
 		varadicUntilExact match buf trees =
 			case trees of
 				[] -> break
-				(t : ts) -> case t of
-					(Branch xs) ->
-						case matchGetDict match t of
-							Just dict -> break
-							Nothing -> continue
-					(_) -> continue
-					where continue = varadicUntilExact match (t : buf) ts
+				(t : ts) -> case matchGetDict match t of
+					Just dict -> break
+					Nothing -> varadicUntilExact match (t : buf) ts
 			where break = (reverse buf, trees)
 
 ---------------
