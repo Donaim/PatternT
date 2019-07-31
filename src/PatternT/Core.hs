@@ -113,11 +113,11 @@ matchGroups dict [] ts = Nothing -- Size should be equal
 matchGroups dict ps [] = Nothing -- Size should be equal
 matchGroups dict (p : ps) (t : ts) = case p of
 	(VaradicMatch bindName) ->
-		case maybeFollowingExactMatch ps of
-			Nothing -> Just $ bindingAdd dict bindName (t : ts) ++ followingVaradictMatches
+		case followingExactMatches of
+			[] -> Just $ bindingAdd dict bindName (t : ts) ++ followingVaradictMatches
 
-			Just m ->
-				let (varadicMatched, rest) = varadicUntilExact m [] (t : ts)
+			ms ->
+				let (varadicMatched, rest) = varadicUntilExact ms [] (t : ts)
 				in let newDict = bindingAdd dict bindName varadicMatched
 					in matchGroups newDict ps rest
 
@@ -136,21 +136,32 @@ matchGroups dict (p : ps) (t : ts) = case p of
 				(VaradicMatch bindName) -> (bindName, []) : loop xs
 				(_) -> loop xs
 
-		maybeFollowingExactMatch patterns = case patterns of
-			(x : xs) -> case x of
-				(NameMatch {}) -> Just x
-				(MatchGroup {}) -> Just x
-				(_) -> maybeFollowingExactMatch xs
-			[] -> Nothing
+		followingExactMatches = loop False ps
+			where
+			loop foundQ patterns = case patterns of
+				[] -> []
+				(x : xs) -> case x of
+					(NameMatch {}) -> x : loop True xs
+					(MatchGroup {}) -> x : loop True xs
+					(_) -> if foundQ then [] else loop False xs
 
-		varadicUntilExact :: PatternMatchPart -> [Tree] -> [Tree] -> ([Tree], [Tree])
-		varadicUntilExact match buf trees =
+		varadicUntilExact :: [PatternMatchPart] -> [Tree] -> [Tree] -> ([Tree], [Tree])
+		varadicUntilExact matches buf trees =
 			case trees of
 				[] -> break
-				(t : ts) -> case matchGetDict match t of
-					Just dict -> break
-					Nothing -> varadicUntilExact match (t : buf) ts
+				(t : ts) -> if matchSome trees matches
+					then break
+					else varadicUntilExact matches (t : buf) ts
 			where break = (reverse buf, trees)
+
+		matchSome :: [Tree] -> [PatternMatchPart] -> Bool
+		matchSome trees patterns = case patterns of
+			[] -> True
+			(p : ps) -> case trees of
+				[] -> False
+				(t : ts) -> case matchGetDict p t of
+					Just {} -> matchSome ts ps
+					Nothing -> False
 
 ---------------
 -- ORDERING --
