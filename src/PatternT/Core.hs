@@ -145,6 +145,7 @@ matchGroups dict (p : ps) (t : ts) = case p of
 				(x : xs) -> case x of
 					(NameMatch {}) -> x : loop True xs
 					(MatchGroup {}) -> x : loop True xs
+					(BuiltinMatch {}) -> x : loop True xs
 					(_) -> if foundQ then [] else loop False xs
 
 		varadicUntilExact :: [PatternMatchPart] -> [Tree] -> [Tree] -> ([Tree], [Tree])

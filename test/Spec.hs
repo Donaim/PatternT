@@ -51,6 +51,7 @@ coms = [
 		-- , "-> -> arrow" -- FAILING: by design
 		, "{ys} (a b c) {xs} -> match1 ({ys}) ({xs})"
 		, "{ys} & & {xs} -> &"
+		, "builtinmatchcase {ys} #k -> k"
 		]
 	,
 		[
@@ -70,6 +71,7 @@ coms = [
 		, ("->",                                                "arrow")
 		, ("x x (1 2 3) y y",                                  "(match1 (x x) (y y))")
 		, ("a & d & & k",                                      "&")
+		, ("builtinmatchcase a b c 5",                         "5")
 		-- , ("($sub ($add ($div 1 1000) 1) ($div 1 1000)))",     "1") -- FAILING: show & read of double is not good..
 		]
 	),
