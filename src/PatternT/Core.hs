@@ -120,10 +120,19 @@ matchGroups dict (p : ps) (t : ts) = case p of
 
 	(_) -> notVaradic
 	where
-		withVaradics bindName varargs rest = case followingExactMatches of
-			[] -> Just $ bindingAdd dict bindName (t : ts) ++ followingVaradictMatches
-			ms -> let newDict = bindingAdd dict bindName varargs
-				in matchGroups newDict ps rest
+		withVaradics bindName varargs rest =
+			if variableDiff < 0
+			then Nothing
+			else case followingExactMatches of
+				[] -> Just $ bindingAdd dictWithVariables bindName dropedVariables ++ followingVaradictMatches
+				ms -> let newDict = bindingAdd dictWithVariables bindName dropedVariables
+					in matchGroups newDict ps rest
+
+			where
+			variableDiff = length varargs - length followingVariableMatches
+			dropedVariables = take variableDiff varargs -- Substructing variables from the end
+			takenVariables = zip followingVariableMatches (map (\ x -> [x]) $ drop variableDiff varargs)
+			dictWithVariables = dict ++ takenVariables
 
 		notVaradic = case matchWithDict dict p t of
 			Nothing -> Nothing
@@ -138,14 +147,15 @@ matchGroups dict (p : ps) (t : ts) = case p of
 				(VaradicMatch bindName) -> (bindName, []) : loop xs
 				(_) -> loop xs
 
-		followingExactMatches = loop False ps
+		(followingVariableMatches, followingExactMatches) = partitionEithers $ loop False ps
 			where
 			loop foundQ patterns = case patterns of
 				[] -> []
 				(x : xs) -> case x of
-					(NameMatch {}) -> x : loop True xs
-					(MatchGroup {}) -> x : loop True xs
-					(BuiltinMatch {}) -> x : loop True xs
+					(NameMatch {}) -> Right x : loop True xs
+					(MatchGroup {}) -> Right x : loop True xs
+					(BuiltinMatch {}) -> Right x : loop True xs
+					(Variable bindName) -> if foundQ then [] else Left bindName : loop False xs
 					(_) -> if foundQ then [] else loop False xs
 
 		varadicUntilExact :: [PatternMatchPart] -> [Tree] -> [Tree] -> ([Tree], [Tree])

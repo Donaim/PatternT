@@ -52,6 +52,7 @@ coms = [
 		, "{ys} (a b c) {xs} -> match1 ({ys}) ({xs})"
 		, "{ys} & & {xs} -> &"
 		, "builtinmatchcase {ys} #k -> k"
+		, "varargs-case1 {ys} a b -> a b {ys}"
 		]
 	,
 		[
@@ -72,6 +73,9 @@ coms = [
 		, ("x x (1 2 3) y y",                                  "(match1 (x x) (y y))")
 		, ("a & d & & k",                                      "&")
 		, ("builtinmatchcase a b c 5",                         "5")
+		, ("varargs-case1 x y z w",                            "(z w x y)")
+		, ("varargs-case1 x y",                                "(x y)")
+		, ("varargs-case1 x",                                  "(varargs-case1 x)")
 		-- , ("($sub ($add ($div 1 1000) 1) ($div 1 1000)))",     "1") -- FAILING: show & read of double is not good..
 		]
 	),
