@@ -14,14 +14,16 @@ import PatternT.Display
 coms :: [([String], [(String, String)])]
 coms = [
 	(
-		[ "a ((+)) a -> ((a))"
+		[
+		  "a ((+)) a -> ((a))"
 		, "a + b -> b"
 		, "vanish a ->"
 		, "({ys} % {zs}) % x -> x % ({ys} % {zs})"
 		, "({ys}) / x -> x"
 		]
 	,
-		[ ("x + (((x + x)))",                                  "x")
+		[ 
+		  ("x + (((x + x)))",                                  "x")
 		, ("(((y)) ((+)) x) + y",                              "y")
 		, ("(y + x) * y",                                      "(x * y)")
 		, ("(z (x (vanish (a + b)))",                          "(z x)")
@@ -35,7 +37,8 @@ coms = [
 		]
 	),
 	(
-		[ "a + b -> 2 * a | a == b"
+		[
+		  "a + b -> 2 * a | a == b"
 		, "x * y -> $mult x y"
 		, "<2 x -> true | (x * x) == x"
 		, "<2 x -> false | (x * x) != x"
@@ -50,7 +53,8 @@ coms = [
 		, "{ys} & & {xs} -> &"
 		]
 	,
-		[ ("1 + 1",                                            "2")
+		[
+		  ("1 + 1",                                            "2")
 		, ("1 + 2",                                            "(1 + 2)")
 		, ("2 * a",                                            "($mult 2 a)")
 		, ("<2 0",                                             "true")
@@ -70,7 +74,8 @@ coms = [
 		]
 	),
 	(
-		[ "a or a -> a"
+		[
+		  "a or a -> a"
 		, "a and a -> a"
 		, "a or (not a) -> 1"
 		, "a and (not a) -> 0"
@@ -93,7 +98,8 @@ coms = [
 		]
 	),
 	(
-		[ "id a -> a"
+		[
+		  "id a -> a"
 		, "true a b -> a"
 		, "false a b -> b "
 
@@ -119,7 +125,8 @@ coms = [
 		, "inf -> succ inf" -- careful
 		]
 	,
-		[ ("id x",                                           "x")
+		[
+		  ("id x",                                           "x")
 		, ("true (false a y) a",                             "y")
 		, ("+ (succ (succ 0)) (succ 0)",                     "(succ (succ (succ 0)))")
 		, ("show (+ (succ (succ 0)) (succ 0))",              "3")
@@ -133,7 +140,8 @@ coms = [
 		]
 	),
 	(
-		[ "#a + #b -> $add a b"
+		[
+		  "#a + #b -> $add a b"
 		, "#a * #b -> $mult a b"
 		, "#a + (#b + w) -> (a + b) + w"
 		, "#a * (#b * w) -> (a * b) * w"
@@ -170,7 +178,8 @@ coms = [
 		, "c * (x + y) -> (c * x) + (c * y)"         -- distributive
 		]
 	,
-		[ ("6",                                                "6")
+		[
+		  ("6",                                                "6")
 		, ("a * b * c",                                        "(a * (b * c))")
 		, ("2 + 2 * 2",                                        "6")
 		, ("(1 + 2 + 3 * kek + 5) * (  2 + 3) + 2",            "(42 + (15 * kek))")
