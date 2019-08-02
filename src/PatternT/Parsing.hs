@@ -122,8 +122,6 @@ parseCond' :: [Expr] -> Either ParseMatchError Conditional
 parseCond' exprs = swapEither $ do
 	tryTwoReplacements "==" EqCond
 	tryTwoReplacements "!=" NeqCond
-	tryTwoReplacements "<" LTCond
-	tryTwoReplacements "<=" LECond
 	matchTry
 
 	where

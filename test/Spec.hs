@@ -170,10 +170,10 @@ coms = [
 		, "0 + x -> x"
 
 		-- commutative
-		, "a + b -> b + a | b < a"
-		, "a * b -> b * a | b < a"
-		, "a + (b + c) -> b + (a + c) | b < a"
-		, "a * (b * c) -> b * (a * c) | b < a"
+		, "a + b -> b + a | lt? b a == True"
+		, "a * b -> b * a | lt? b a == True"
+		, "a + (b + c) -> b + (a + c) | lt? b a == True"
+		, "a * (b * c) -> b * (a * c) | lt? b a == True"
 
 		-- associative
 		, "(a + b) + c -> (a + (b + c))"
@@ -268,6 +268,8 @@ pureRules =
 	, rulePow "$pow"
 	, ruleEqual "$equal"
 	, ruleIsNum "$num?"
+	, ruleLess "lt?"
+	, ruleLessOrEq "le?"
 	]
 
 mixedRules :: [[SimlifyFT]]

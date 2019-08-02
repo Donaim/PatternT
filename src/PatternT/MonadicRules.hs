@@ -47,6 +47,48 @@ ruleIsNum name = (name, func)
 			(_) -> Just $ Leaf "False"
 		(_) -> Nothing
 
+ruleLess :: String -> PureSimplificationF
+ruleLess name = (name, func)
+	where
+	func simplifyF t = case t of
+		(Branch [name, a, b]) -> Just $ Leaf $ show (a < b)
+		(_) -> Nothing
+
+ruleLessOrEq :: String -> PureSimplificationF
+ruleLessOrEq name = (name, func)
+	where
+	func simplifyF t = case t of
+		(Branch [name, a, b]) -> Just $ Leaf $ show (a <= b)
+		(_) -> Nothing
+
+---------------
+-- ORDERING --
+---------------
+
+compareLeafs :: Symbol -> Symbol -> Ordering
+compareLeafs a b =
+	case symbolToMaybeNum a of
+		Nothing -> case symbolToMaybeNum b of
+			Nothing -> compare a b
+			Just bn -> GT
+		Just an -> case symbolToMaybeNum b of
+			Nothing -> LT
+			Just bn -> compare an bn
+
+instance Ord Tree where
+	compare a b =
+		case a of
+			(Leaf as) -> case b of
+				(Leaf bs) ->
+					compareLeafs as bs
+				(Branch {}) ->
+					LT -- ASSUMPTION: no singleton branches
+			(Branch xs) -> case b of
+				(Leaf {}) ->
+					GT -- ASSUMPTION: no singleton branches
+				(Branch ys) ->
+					compare (reverse xs) (reverse ys) -- NOTE: the size of branch is the secondary thing, the most important is LAST element of branch
+
 -----------
 -- UTILS --
 -----------
