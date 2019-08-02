@@ -5,6 +5,11 @@ import Text.Read (readMaybe)
 import Debug.Trace
 import PatternT.Types
 
+maybeDefault :: a -> (a -> Maybe a) -> a
+maybeDefault x f = case f x of
+	Just y -> y
+	Nothing -> x
+
 maybeHead :: [a] -> Maybe a
 maybeHead [] = Nothing
 maybeHead (x : xs) = Just x

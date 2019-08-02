@@ -17,7 +17,8 @@ checkCond simplifyF dict cond = case cond of
 	(NeqCond left right) ->
 		simplify (replaceWithDict dict left)
 			/= simplify (replaceWithDict dict right)
-	where simplify = applySimplificationsUntil0LastF simplifyF
+	where
+	simplify t = applyTreeAll simplifyF t
 
 matchAndReplace :: (Tree -> Maybe Tree) -> SimplifyPattern -> Tree -> Maybe Tree
 matchAndReplace simplifyF (match, replace, conds) t =
@@ -172,6 +173,14 @@ matchGroups dict (p : ps) (t : ts) = case p of
 ------------------
 -- APPLICATIONS --
 ------------------
+
+applyTreeAll :: (Tree -> Maybe Tree) -> Tree -> Tree
+applyTreeAll func t = case t of
+	(Leaf s) -> maybeDefault t func
+	(Branch childs) ->
+		let newchildren = map (applyTreeAll func) childs
+		in let newme = (Branch newchildren)
+			in maybeDefault newme func
 
 applyTreeOne :: (Tree -> Maybe Tree) -> Tree -> Maybe Tree
 applyTreeOne func t = case t of
