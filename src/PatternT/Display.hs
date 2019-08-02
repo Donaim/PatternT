@@ -16,12 +16,7 @@ stringifyMatchPart t = case t of
 	(Variable s) -> s
 	(NameMatch name) -> name
 	(VaradicMatch name) -> name
-	(BuiltinMatch m) -> stringifyBuiltinMatch m
 	(MatchGroup x xs) -> "(" ++ stringifyMatchPart x ++ concatMap ((' ' :) . stringifyMatchPart) xs ++ ")"
-
-stringifyBuiltinMatch :: BuiltinMatchEnum -> String
-stringifyBuiltinMatch m = case m of
-	(BuiltinMatchNumber symbol) -> '#' : symbol
 
 stringifyReplacePart :: PatternReplacePart -> String
 stringifyReplacePart t = case t of

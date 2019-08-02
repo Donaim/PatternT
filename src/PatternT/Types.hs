@@ -17,15 +17,10 @@ data ParseError
 	= FreeTokensAfterClose String
 	deriving (Eq, Show, Read)
 
-data BuiltinMatchEnum
-	= BuiltinMatchNumber Symbol
-	deriving (Eq, Show, Read)
-
 data PatternMatchPart
 	= Variable Symbol
 	| NameMatch Symbol
 	| VaradicMatch Symbol
-	| BuiltinMatch BuiltinMatchEnum
 	| MatchGroup PatternMatchPart [PatternMatchPart]
 	deriving (Eq, Show, Read)
 

@@ -75,9 +75,6 @@ matchWithDict dict match t =
 		(VaradicMatch bindName) ->
 			matchVariable dict bindName t
 
-		(BuiltinMatch m) ->
-			matchBuiltinWithDict dict m t
-
 		(MatchGroup p ps) ->
 			case t of
 				(Branch xs) ->
@@ -94,11 +91,6 @@ matchVariable dict bindName t =
 			else Nothing
 		(_) ->
 			Just (bindingAdd dict bindName [t])
-
-matchBuiltinWithDict :: BindingDict -> BuiltinMatchEnum -> Tree -> Maybe BindingDict
-matchBuiltinWithDict dict match t = case match of
-	(BuiltinMatchNumber bindName) ->
-		treeToMaybeNum t >> matchVariable dict bindName t
 
 matchGroups :: BindingDict -> [PatternMatchPart] -> [Tree] -> Maybe BindingDict
 matchGroups dict [] [] = Just dict
@@ -147,7 +139,6 @@ matchGroups dict (p : ps) (t : ts) = case p of
 				(x : xs) -> case x of
 					(NameMatch {}) -> Right x : loop True xs
 					(MatchGroup {}) -> Right x : loop True xs
-					(BuiltinMatch {}) -> Right x : loop True xs
 					(Variable bindName) -> if foundQ then [] else Left bindName : loop False xs
 					(_) -> if foundQ then [] else loop False xs
 

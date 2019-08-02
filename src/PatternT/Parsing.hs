@@ -172,8 +172,6 @@ exprToMatchPattern t = case t of
 				if isDigit x || (not (isAlpha x))
 				then NameMatch s
 				else Variable s
-			('#' : xs) -> Right $
-				BuiltinMatch $ BuiltinMatchNumber xs
 			('{' : xs) ->
 				if last xs == '}' -- ASSUMPTION: we know that xs is not empty because previus match would fire
 				then Right $ VaradicMatch s -- NOTE: variable name is actually like "{x}", not just "x"

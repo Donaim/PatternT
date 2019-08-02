@@ -50,7 +50,7 @@ coms = [
 		-- , "-> -> arrow" -- FAILING: by design
 		, "{ys} (a b c) {xs} -> match1 ({ys}) ({xs})"
 		, "{ys} & & {xs} -> &"
-		, "builtinmatchcase {ys} #k -> k"
+		, "builtinmatchcase {ys} k -> k | $num? k"
 		, "varargs-case1 {ys} a b -> a b {ys}"
 		]
 	,
@@ -148,13 +148,13 @@ coms = [
 	),
 	(
 		[
-		  "#a + #b -> $add a b"
-		, "#a * #b -> $mult a b"
-		, "#a + (#b + w) -> (a + b) + w"
-		, "#a * (#b * w) -> (a * b) * w"
+		  "a + b -> $add a b           | $num? a | $num? b"
+		, "a * b -> $mult a b          | $num? a | $num? b"
+		, "a + (b + w) -> (a + b) + w  | $num? a | $num? b"
+		, "a * (b * w) -> (a * b) * w  | $num? a | $num? b"
 		, "(+ y) -> y"
 		, "(x +) -> x"
-		, "(#x + +) -> x"
+		, "(x + +) -> x                | $num? x"
 
 		-- prioritizing
 		, "{xs} + a b {bs} -> {xs} + (a b {bs})"
@@ -177,10 +177,10 @@ coms = [
 		, "(a * b) * c -> (a * (b * c))"
 
 		-- adding symbols with coefficients
-		, "(#a * x) + (#b * x) -> (a + b) * x"
-		, "(#a * x) + ((#b * x) + w) -> (a + b) * x + w"
-		, "x + (#b * x) -> (1 + b) * x"
-		, "x + ((#b * x) + w) -> (1 + b) * x + w"
+		, "(a * x) + (b * x) -> (a + b) * x              | $num? a | $num? b"
+		, "(a * x) + ((b * x) + w) -> (a + b) * x + w    | $num? a | $num? b"
+		, "x + (b * x) -> (1 + b) * x                    | $num? b"
+		, "x + ((b * x) + w) -> (1 + b) * x + w          | $num? b"
 
 		, "c * (x + y) -> (c * x) + (c * y)"         -- distributive
 		]
