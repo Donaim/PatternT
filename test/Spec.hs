@@ -40,8 +40,8 @@ coms = [
 		[
 		  "a + b -> 2 * a | a == b"
 		, "x * y -> $mult x y"
-		, "<2 x -> true | (x * x) == x"
-		, "<2 x -> false | (x * x) != x"
+		, "<2 x -> true | $equal (x * x) x == True"
+		, "<2 x -> false | $equal (x * x) x == False"
 		, "x % #y -> y | x !> #k"
 		, "\"one two\" -> \"one-two\""
 		, "'two  tree' -> \"two-tree\""

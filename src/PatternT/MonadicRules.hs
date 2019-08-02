@@ -2,6 +2,8 @@
 -- | Ready to use monadic simplification rules
 module PatternT.MonadicRules where
 
+import Debug.Trace
+
 import PatternT.Types
 import PatternT.Util
 import PatternT.Core
@@ -27,10 +29,11 @@ ruleEqual name = (name, func)
 	where
 	func simplifyF t = case t of
 		(Branch (fname : x : xs)) -> -- ASSUMPTION: fname  == name
-			let simplified = map (applySimplificationsUntil0LastF simplifyF) xs
-			in if all (== x) xs
-				then Just $ Leaf "True"
-				else Just $ Leaf "False"
+			let simplifiedxs = map (applySimplificationsUntil0LastF simplifyF) xs
+			in let simplifiedx = applySimplificationsUntil0LastF simplifyF x
+				in if all (== simplifiedx) simplifiedxs
+					then Just $ Leaf "True"
+					else Just $ Leaf "False"
 		(_) -> Nothing
 
 ruleIsNum :: String -> PureSimplificationF
