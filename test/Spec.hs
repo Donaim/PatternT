@@ -257,11 +257,11 @@ okRulesStr = map (map stringifySimplifyPattern) okRules
 
 pureRules :: [PureSimplificationF]
 pureRules =
-	[ ("$add", ruleAdd "$add")
-	, ("$mult", ruleMult "$mult")
-	, ("$sub", ruleSub "$sub")
-	, ("$div", ruleDiv "$div")
-	, ("$pow", rulePow "$pow")
+	[ ruleAdd "$add"
+	, ruleMult "$mult"
+	, ruleSub "$sub"
+	, ruleDiv "$div"
+	, rulePow "$pow"
 	]
 
 mixedRules :: [[SimlifyFT]]

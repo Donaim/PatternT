@@ -6,20 +6,20 @@ import PatternT.Types
 import PatternT.Util
 import PatternT.SimplifyInterface
 
-ruleAdd :: String -> Tree -> Maybe Tree
-ruleAdd = stdNumberRule (+)
+ruleAdd :: String -> PureSimplificationF
+ruleAdd name = (name, const $ stdNumberRule (+) name)
 
-ruleMult :: String -> Tree -> Maybe Tree
-ruleMult = stdNumberRule (*)
+ruleMult :: String -> PureSimplificationF
+ruleMult name = (name, const $ stdNumberRule (*) name)
 
-ruleSub :: String -> Tree -> Maybe Tree
-ruleSub = stdNumberRule (-)
+ruleSub :: String -> PureSimplificationF
+ruleSub name = (name, const $ stdNumberRule (-) name)
 
-ruleDiv :: String -> Tree -> Maybe Tree
-ruleDiv = stdNumberRule (/)
+ruleDiv :: String -> PureSimplificationF
+ruleDiv name = (name, const $ stdNumberRule (/) name)
 
-rulePow :: String -> Tree -> Maybe Tree
-rulePow = stdNumberRule rationalPow
+rulePow :: String -> PureSimplificationF
+rulePow name = (name, const $ stdNumberRule rationalPow name)
 
 -----------
 -- UTILS --

@@ -60,10 +60,11 @@ data Tuple3 a b c
 	| Tuple31 b
 	| Tuple32 c
 
--- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the read-write context that is carried around
-type MonadicSimplify m ctx = (String, ctx -> Tree -> m (Maybe (ctx, Tree)))
+-- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the read-write context that is carried around. The monadic action also recieves aggregated simplify function
+type MonadicSimplify m ctx = (String, (Tree -> Maybe Tree) -> ctx -> Tree -> m (Maybe (ctx, Tree)))
 
-type PureSimplificationF = ((String), (Tree -> Maybe Tree))
+-- | Pair of (function name, Function that accepts <aggregated simplify function> <tree to simplify> ) where aggregated simplify is a composition of all pure simplify functions that are used for applyTreeOne
+type PureSimplificationF = (String, (Tree -> Maybe Tree) -> Tree -> Maybe Tree)
 
 -- | General simplification possibilities
 type SimplificationF m ctx = Tuple3 SimplifyPattern (MonadicSimplify m ctx) PureSimplificationF

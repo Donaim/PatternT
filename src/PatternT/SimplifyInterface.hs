@@ -73,16 +73,17 @@ monadicMatchAndReplace name func =
 	withFunctionNameCheck (return Nothing) (name, func)
 
 monadicApplyFirstSimplification :: (Monad m) =>
+	(Tree -> Maybe Tree) ->
 	[MonadicSimplify m ctx] ->
 	ctx ->
 	Tree ->
 	m (Maybe (Tree, String, ctx))
-monadicApplyFirstSimplification simplifications ctx t0 = loop simplifications t0
+monadicApplyFirstSimplification simplify simplifications ctx t0 = loop simplifications t0
 	where
 	loop simplifications t = case simplifications of
 		[] -> return Nothing
 		((name, func) : xs) -> do
-			r <- monadicApplyTreeOne (monadicMatchAndReplace name (func ctx)) t
+			r <- monadicApplyTreeOne (monadicMatchAndReplace name (func simplify ctx)) t
 			case r of
 				Just (newCtx, newt) -> return $ Just (newt, name, newCtx)
 				Nothing -> loop xs t
@@ -99,6 +100,7 @@ mixedApplyFirstSimplificationWithSimplify :: (Monad m) =>
 	m (Maybe (Tree, Either SimplifyPattern String, ctx))
 mixedApplyFirstSimplificationWithSimplify simplify simplifications ctx t0 = loop simplifications t0
 	where
+	-- loop :: [SimplificationF m ctx] -> Tree -> m (Maybe (Tree, Either SimplifyPattern String, ctx))
 	loop simplifications t = case simplifications of
 		[] -> return Nothing
 		(simpl : xs) -> case simpl of
@@ -109,15 +111,15 @@ mixedApplyFirstSimplificationWithSimplify simplify simplifications ctx t0 = loop
 						Nothing -> loop xs t
 
 				Tuple31 (name, func) -> do
-					r <- monadicApplyTreeOne (monadicMatchAndReplace name (func ctx)) t
+					r <- monadicApplyTreeOne (monadicMatchAndReplace name (func simplify ctx)) t
 					case r of
 						Just (newCtx, newt) -> return $ Just (newt, Right name, newCtx)
 						Nothing -> loop xs t
 
-				Tuple32 pure ->
-					let r = applyTreeOne (withFunctionNameCheck Nothing pure) t
+				Tuple32 (name, func) ->
+					let r = applyTreeOne (withFunctionNameCheck Nothing (name, func simplify)) t
 					in case r of
-						Just newt -> return $ Just (newt, Right (fst pure), ctx)
+						Just newt -> return $ Just (newt, Right name, ctx)
 						Nothing -> loop xs t
 
 mixedApplyFirstSimplificationWithPure :: (Monad m) =>
@@ -159,12 +161,12 @@ mixedApplySimplificationsWithPureUntil0Debug simplifications ctx0 t0 = loop ctx0
 -- UTILS --
 -----------
 
-liftPure :: (Monad m) => String -> (Tree -> Maybe Tree) -> MonadicSimplify m ctx
-liftPure name pure = (name, func)
-	where
-	func ctx t = return $ case pure t of
-		Nothing -> Nothing
-		Just newt -> Just (ctx, newt)
+-- liftPure :: (Monad m) => String -> (Tree -> Maybe Tree) -> MonadicSimplify m ctx
+-- liftPure name pure = (name, func)
+-- 	where
+-- 	func ctx t = return $ case pure t of
+-- 		Nothing -> Nothing
+-- 		Just newt -> Just (ctx, newt)
 
 withFunctionNameCheck :: b -> (String, Tree -> b) -> (Tree -> b)
 withFunctionNameCheck defaul (name, func) tree = case tree of -- NOTE: in simplify function we always check the name!
@@ -196,4 +198,4 @@ makePureSimplify simplifications = firstAggregated
 	collectSimplify (f : fs) = case f of
 		Tuple30 pattern -> (applyPattern pattern) : collectSimplify fs
 		Tuple31 {} -> collectSimplify fs
-		Tuple32 pure -> (withFunctionNameCheck Nothing pure) : collectSimplify fs
+		Tuple32 (name, func) -> (withFunctionNameCheck Nothing (name, func firstAggregated)) : collectSimplify fs
