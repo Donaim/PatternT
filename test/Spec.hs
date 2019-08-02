@@ -77,6 +77,8 @@ coms = [
 		, ("varargs-case1 x y",                                "(x y)")
 		, ("varargs-case1 x",                                  "(varargs-case1 x)")
 		-- , ("($sub ($add ($div 1 1000) 1) ($div 1 1000)))",     "1") -- FAILING: show & read of double is not good..
+		, ("$equal (2 3 4) (2 3 4)",                           "True")
+		, ("$equal (a b c) (c e d)",                           "False")
 		]
 	),
 	(
@@ -262,6 +264,7 @@ pureRules =
 	, ruleSub "$sub"
 	, ruleDiv "$div"
 	, rulePow "$pow"
+	, ruleEqual "$equal"
 	]
 
 mixedRules :: [[SimlifyFT]]

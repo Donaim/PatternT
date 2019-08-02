@@ -4,6 +4,7 @@ module PatternT.MonadicRules where
 
 import PatternT.Types
 import PatternT.Util
+import PatternT.Core
 import PatternT.SimplifyInterface
 
 ruleAdd :: String -> PureSimplificationF
@@ -20,6 +21,17 @@ ruleDiv name = (name, const $ stdNumberRule (/) name)
 
 rulePow :: String -> PureSimplificationF
 rulePow name = (name, const $ stdNumberRule rationalPow name)
+
+ruleEqual :: String -> PureSimplificationF
+ruleEqual name = (name, func)
+	where
+	func simplifyF t = case t of
+		(Branch (fname : x : xs)) -> -- ASSUMPTION: fname  == name
+			let simplified = map (applySimplificationsUntil0LastF simplifyF) xs
+			in if all (== x) xs
+				then Just $ Leaf "True"
+				else Just $ Leaf "False"
+		(_) -> Nothing
 
 -----------
 -- UTILS --
