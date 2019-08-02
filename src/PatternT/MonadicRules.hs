@@ -33,6 +33,17 @@ ruleEqual name = (name, func)
 				else Just $ Leaf "False"
 		(_) -> Nothing
 
+ruleIsNum :: String -> PureSimplificationF
+ruleIsNum name = (name, func)
+	where
+	func simplifyF t = case t of
+		(Branch (name : args)) -> case args of
+			[x] -> case treeToMaybeNum x of
+				Just n -> Just $ Leaf "True"
+				Nothing -> Just $ Leaf "False"
+			(_) -> Just $ Leaf "False"
+		(_) -> Nothing
+
 -----------
 -- UTILS --
 -----------

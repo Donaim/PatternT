@@ -79,6 +79,8 @@ coms = [
 		-- , ("($sub ($add ($div 1 1000) 1) ($div 1 1000)))",     "1") -- FAILING: show & read of double is not good..
 		, ("$equal (2 3 4) (2 3 4)",                           "True")
 		, ("$equal (a b c) (c e d)",                           "False")
+		, ("$num? 5",                                          "True")
+		, ("$num? (1 2)",                                      "False")
 		]
 	),
 	(
@@ -265,6 +267,7 @@ pureRules =
 	, ruleDiv "$div"
 	, rulePow "$pow"
 	, ruleEqual "$equal"
+	, ruleIsNum "$num?"
 	]
 
 mixedRules :: [[SimlifyFT]]
