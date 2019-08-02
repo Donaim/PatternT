@@ -191,13 +191,6 @@ applyTreeOne func t = case t of
 					(_) -> (Branch (previus ++ [newc] ++ cs))
 			Nothing -> loop (previus ++ [c]) cs
 
-applySimplificationsUntil0LastF :: (Tree -> Maybe Tree) -> Tree -> Tree
-applySimplificationsUntil0LastF func t0 = loop t0
-	where
-	loop t = case func t of
-		Nothing -> t
-		Just newt -> loop newt
-
 monadicApplyTreeOne :: (Monad m) =>
 	(Tree -> m (Maybe (ctx, Tree))) ->
 	Tree ->

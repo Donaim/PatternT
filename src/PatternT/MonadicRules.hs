@@ -6,7 +6,6 @@ import Debug.Trace
 
 import PatternT.Types
 import PatternT.Util
-import PatternT.Core
 import PatternT.SimplifyInterface
 
 ruleAdd :: String -> PureSimplificationF

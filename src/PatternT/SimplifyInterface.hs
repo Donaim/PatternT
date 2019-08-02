@@ -53,6 +53,13 @@ applyFirstSimplificationF funcs t0 = loop funcs t0
 			Just newt -> Just newt
 			Nothing -> loop fs t
 
+applySimplificationsUntil0LastF :: (Tree -> Maybe Tree) -> Tree -> Tree
+applySimplificationsUntil0LastF func t0 = loop t0
+	where
+	loop t = case func t of
+		Nothing -> t
+		Just newt -> loop newt
+
 applySimplificationsUntil0Last :: [SimplifyPattern] -> Tree -> Tree
 applySimplificationsUntil0Last patterns t0 = loop t0
 	where
