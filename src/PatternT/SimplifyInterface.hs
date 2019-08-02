@@ -49,13 +49,6 @@ applySimplificationsUntil0Last patterns t0 = loop t0
 		Nothing -> t
 		Just newt -> loop (fst newt)
 
-applySimplificationsUntil0LastF :: (Tree -> Maybe Tree) -> Tree -> Tree
-applySimplificationsUntil0LastF func t0 = loop t0
-	where
-	loop t = case func t of
-		Nothing -> t
-		Just newt -> loop newt
-
 -----------------------------
 -- MONADIC SIMPLIFICATIONS --
 -----------------------------
