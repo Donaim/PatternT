@@ -123,10 +123,15 @@ parseCond' exprs = swapEither $ do
 	tryTwoReplacements "==" EqCond
 	tryTwoReplacements "!=" NeqCond
 
+	swapEither $ do
+		rleft <- parseReplacePart' exprs
+		let rright = RVar "True"
+		return (EqCond rleft rright)
+
 	where
 	tryTwoReplacements :: String -> (PatternReplacePart -> PatternReplacePart -> Conditional) -> Either Conditional ParseMatchError
 	tryTwoReplacements key constructor = case partitionExpr key exprs of
-		(left, Nothing, right) -> Right $ CondExpected exprs
+		(left, Nothing, right) -> Right $ SplitFailed [exprs]
 		(left, Just eq, right) -> swapEither $ do
 			rleft <- parseReplacePart' left
 			rright <- parseReplacePart' right
