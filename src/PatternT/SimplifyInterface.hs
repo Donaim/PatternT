@@ -15,7 +15,7 @@ import PatternT.Util
 applySimplifications :: [SimplifyPattern] -> Tree -> [Tree]
 applySimplifications patterns t0 = loop patterns t0
 	where
-	simplify = applySimplificationsUntil0Last patterns
+	simplify = applyFirstSimplificationL patterns
 	loop patterns t = case patterns of
 		[] -> []
 		(x : xs) -> case applyTreeOne (matchAndReplace simplify x) t of
@@ -26,11 +26,22 @@ applySimplifications patterns t0 = loop patterns t0
 applyFirstSimplification :: [SimplifyPattern] -> Tree -> Maybe (Tree, SimplifyPattern)
 applyFirstSimplification patterns t0 = loop patterns t0
 	where
-	simplify = applySimplificationsUntil0Last patterns
+	simplify = applyFirstSimplificationL patterns
 	loop patterns t = case patterns of
 		[] -> Nothing
 		(x : xs) -> case applyTreeOne (matchAndReplace simplify x) t of
 			Just newt -> Just (newt, x)
+			Nothing -> loop xs t
+
+-- Breaks on first success, does not return SimplifyPattern that matched
+applyFirstSimplificationL :: [SimplifyPattern] -> Tree -> Maybe Tree
+applyFirstSimplificationL patterns t0 = loop patterns t0
+	where
+	simplify = applyFirstSimplificationL patterns -- NOTE: exponential, unpredictable, dangerous
+	loop patterns t = case patterns of
+		[] -> Nothing
+		(x : xs) -> case applyTreeOne (matchAndReplace simplify x) t of
+			Just newt -> Just newt
 			Nothing -> loop xs t
 
 applyFirstSimplificationF :: [Tree -> Maybe Tree] -> Tree -> Maybe Tree
@@ -45,9 +56,9 @@ applyFirstSimplificationF funcs t0 = loop funcs t0
 applySimplificationsUntil0Last :: [SimplifyPattern] -> Tree -> Tree
 applySimplificationsUntil0Last patterns t0 = loop t0
 	where
-	loop t = case applyFirstSimplification patterns t of
+	loop t = case applyFirstSimplificationL patterns t of
 		Nothing -> t
-		Just newt -> loop (fst newt)
+		Just newt -> loop newt
 
 -----------------------------
 -- MONADIC SIMPLIFICATIONS --
@@ -81,7 +92,7 @@ monadicApplyFirstSimplification simplifications ctx t0 = loop simplifications t0
 -----------
 
 mixedApplyFirstSimplificationWithSimplify :: (Monad m) =>
-	(Tree -> Tree) ->
+	(Tree -> Maybe Tree) ->
 	[SimplificationF m ctx] ->
 	ctx ->
 	Tree ->
@@ -171,17 +182,14 @@ withFunctionNameCheck defaul (name, func) tree = case tree of -- NOTE: in simpli
 	(_) -> defaul
 
 -- | Using mixed rules, take pure ones and make a simplify function to use in Conditionals
-makePureSimplify :: (Monad m) => [SimplificationF m ctx] -> (Tree -> Tree)
-makePureSimplify simplifications = simplify
+makePureSimplify :: (Monad m) => [SimplificationF m ctx] -> (Tree -> Maybe Tree)
+makePureSimplify simplifications = firstAggregated
 	where
-	simplify :: (Tree -> Tree)
-	simplify = applySimplificationsUntil0LastF firstAggregated
-
 	firstAggregated :: (Tree -> Maybe Tree)
 	firstAggregated = applyFirstSimplificationF (collectSimplify simplifications)
 
 	applyPattern :: SimplifyPattern -> (Tree -> Maybe Tree)
-	applyPattern pattern = applyTreeOne (matchAndReplace simplify pattern)
+	applyPattern pattern = applyTreeOne (matchAndReplace firstAggregated pattern) -- NOTE: dangerous
 
 	collectSimplify :: [SimplificationF m ctx] -> [(Tree -> Maybe Tree)]
 	collectSimplify [] = []

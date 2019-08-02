@@ -9,8 +9,8 @@ import PatternT.Util
 
 type BindingDict = Dict String [Tree]
 
-checkCond :: (Tree -> Tree) -> BindingDict -> Conditional -> Bool
-checkCond simplify dict cond = case cond of
+checkCond :: (Tree -> Maybe Tree) -> BindingDict -> Conditional -> Bool
+checkCond simplifyF dict cond = case cond of
 	(EqCond left right) ->
 		simplify (replaceWithDict dict left)
 			== simplify (replaceWithDict dict right)
@@ -26,12 +26,14 @@ checkCond simplify dict cond = case cond of
 		replaceWithDict dict left
 			<= replaceWithDict dict right
 
-matchAndReplace :: (Tree -> Tree) -> SimplifyPattern -> Tree -> Maybe Tree
-matchAndReplace simplify (match, replace, conds) t =
+	where simplify = applySimplificationsUntil0LastF simplifyF
+
+matchAndReplace :: (Tree -> Maybe Tree) -> SimplifyPattern -> Tree -> Maybe Tree
+matchAndReplace simplifyF (match, replace, conds) t =
 	case matchGetDict match t of
 		Nothing -> Nothing
 		Just dict ->
-			if all (checkCond simplify dict) conds
+			if all (checkCond simplifyF dict) conds
 			then Just (replaceWithDict dict replace)
 			else Nothing
 
