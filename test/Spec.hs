@@ -40,9 +40,9 @@ coms = [
 		[
 		  "a + b -> 2 * a | a == b"
 		, "x * y -> $mult x y"
-		, "<2 x -> true | (x * x) == x"
-		, "<2 x -> false | (x * x) != x"
-		, "x % #y -> y | x !> #k"
+		, "<2 x -> true | $simplify (x * x) == x"
+		, "<2 x -> false | $simplify (x * x) != x"
+		-- , "x % #y -> y | x !> #k"
 		, "\"one two\" -> \"one-two\""
 		, "'two  tree' -> \"two-tree\""
 		, "(a -> b) -> b"
@@ -57,168 +57,168 @@ coms = [
 	,
 		[
 		  ("1 + 1",                                            "2")
-		, ("1 + 2",                                            "(1 + 2)")
-		, ("2 * a",                                            "($mult 2 a)")
+		-- , ("1 + 2",                                            "(1 + 2)")
+		-- , ("2 * a",                                            "($mult 2 a)")
 		, ("<2 0",                                             "true")
 		, ("<2 1",                                             "true")
 		, ("<2 3",                                             "false")
-		, ("(1 + 1) * a",                                      "($mult 2 a)")
-		, ("a % 5",                                            "5")
-		, ("4 % 5",                                            "(4 % 5)")
-		, ("\"one two\" % b",                                  "(one-two % b)")
-		, ("\"two  tree\" % b",                                "(two-tree % b)")
-		, ("(a -> b) -> c",                                      "c")
-		, ("|",                                                "pipe")
-		, ("->",                                                "arrow")
-		, ("x x (1 2 3) y y",                                  "(match1 (x x) (y y))")
-		, ("a & d & & k",                                      "&")
-		, ("builtinmatchcase a b c 5",                         "5")
-		, ("varargs-case1 x y z w",                            "(z w x y)")
-		, ("varargs-case1 x y",                                "(x y)")
-		, ("varargs-case1 x",                                  "(varargs-case1 x)")
-		-- , ("($sub ($add ($div 1 1000) 1) ($div 1 1000)))",     "1") -- FAILING: show & read of double is not good..
+		-- , ("(1 + 1) * a",                                      "($mult 2 a)")
+		-- , ("a % 5",                                            "5")
+		-- , ("4 % 5",                                            "(4 % 5)")
+		-- , ("\"one two\" % b",                                  "(one-two % b)")
+		-- , ("\"two  tree\" % b",                                "(two-tree % b)")
+		-- , ("(a -> b) -> c",                                      "c")
+		-- , ("|",                                                "pipe")
+		-- , ("->",                                                "arrow")
+		-- , ("x x (1 2 3) y y",                                  "(match1 (x x) (y y))")
+		-- , ("a & d & & k",                                      "&")
+		-- , ("builtinmatchcase a b c 5",                         "5")
+		-- , ("varargs-case1 x y z w",                            "(z w x y)")
+		-- , ("varargs-case1 x y",                                "(x y)")
+		-- , ("varargs-case1 x",                                  "(varargs-case1 x)")
+		-- -- , ("($sub ($add ($div 1 1000) 1) ($div 1 1000)))",     "1") -- FAILING: show & read of double is not good..
 		]
-	),
-	(
-		[
-		  "a or a -> a"
-		, "a and a -> a"
-		, "a or (not a) -> 1"
-		, "a and (not a) -> 0"
-		, "1 or x -> 1"
-		, "1 and x -> x"
-		, "0 or x -> x"
-		, "0 and x -> 0"
-		, "not (not a) -> a"
-		, "not 0 -> 1"
-		, "not 1 -> 0"
-		]
-	,
-		[ ("x or x",                                           "x")
-		, ("0 and x",                                          "0")
-		, ("(0 and x) or 1",                                   "1")
-		, ("0 and (x or x)",                                   "0")
-		, ("(0 and x) and x",                                  "0")
-		, ("not ((0 and x) and x)",                            "1")
-		, ("(not ((0 and x) and x)) and x",                    "x")
-		]
-	),
-	(
-		[
-		  "id a -> a"
-		, "true a b -> a"
-		, "false a b -> b "
+	-- ),
+	-- (
+	-- 	[
+	-- 	  "a or a -> a"
+	-- 	, "a and a -> a"
+	-- 	, "a or (not a) -> 1"
+	-- 	, "a and (not a) -> 0"
+	-- 	, "1 or x -> 1"
+	-- 	, "1 and x -> x"
+	-- 	, "0 or x -> x"
+	-- 	, "0 and x -> 0"
+	-- 	, "not (not a) -> a"
+	-- 	, "not 0 -> 1"
+	-- 	, "not 1 -> 0"
+	-- 	]
+	-- ,
+	-- 	[ ("x or x",                                           "x")
+	-- 	, ("0 and x",                                          "0")
+	-- 	, ("(0 and x) or 1",                                   "1")
+	-- 	, ("0 and (x or x)",                                   "0")
+	-- 	, ("(0 and x) and x",                                  "0")
+	-- 	, ("not ((0 and x) and x)",                            "1")
+	-- 	, ("(not ((0 and x) and x)) and x",                    "x")
+	-- 	]
+	-- ),
+	-- (
+	-- 	[
+	-- 	  "id a -> a"
+	-- 	, "true a b -> a"
+	-- 	, "false a b -> b "
 
-		, "+ 0 b -> b"
-		, "+ (succ k) b -> succ (+ k b)"
+	-- 	, "+ 0 b -> b"
+	-- 	, "+ (succ k) b -> succ (+ k b)"
 
-		, "* 0 b -> 0"
-		, "* (succ a) b -> + b (* a b)"
+	-- 	, "* 0 b -> 0"
+	-- 	, "* (succ a) b -> + b (* a b)"
 
-		, "> 0 b -> false"
-		, "> a 0 -> true"
-		, "> (succ a) (succ b) -> > a b"
+	-- 	, "> 0 b -> false"
+	-- 	, "> a 0 -> true"
+	-- 	, "> (succ a) (succ b) -> > a b"
 
-		, "fac 0 -> (succ 0)"
-		, "fac (succ x) -> * (succ x) (fac x)"
+	-- 	, "fac 0 -> (succ 0)"
+	-- 	, "fac (succ x) -> * (succ x) (fac x)"
 
-		, "show 0 -> 0"
-		, "show (succ x) -> $add 1 (show x)"
+	-- 	, "show 0 -> 0"
+	-- 	, "show (succ x) -> $add 1 (show x)"
 
-		-- , "(f x) y -> f x y" -- CARRY
-		, "$add #a #b -> $add a b" -- FIX?
+	-- 	-- , "(f x) y -> f x y" -- CARRY
+	-- 	, "$add #a #b -> $add a b" -- FIX?
 
-		, "inf -> succ inf" -- careful
-		]
-	,
-		[
-		  ("id x",                                           "x")
-		, ("true (false a y) a",                             "y")
-		, ("+ (succ (succ 0)) (succ 0)",                     "(succ (succ (succ 0)))")
-		, ("show (+ (succ (succ 0)) (succ 0))",              "3")
-		, ("show (fac (succ (succ (succ (succ 0",            "24")
-		-- , ("show (fac (succ (succ (succ (succ (succ 0",      "120")
-		-- , ("show (fac (succ (succ (succ (succ (succ (succ 0","720") -- ACTUALLY HALTS XD
-		, ("true skipped (show (fac (succ (succ (succ (succ (succ 0", "skipped") -- LAZY
-		, ("> (succ 0) (succ (succ 0))",                     "false")
-		, ("> inf (succ (succ 0))",                          "true")
-		, ("> (succ (succ 0)) inf",                          "false")
-		]
-	),
-	(
-		[
-		  "#a + #b -> $add a b"
-		, "#a * #b -> $mult a b"
-		, "#a + (#b + w) -> (a + b) + w"
-		, "#a * (#b * w) -> (a * b) * w"
-		, "(+ y) -> y"
-		, "(x +) -> x"
-		, "(#x + +) -> x"
+	-- 	, "inf -> succ inf" -- careful
+	-- 	]
+	-- ,
+	-- 	[
+	-- 	  ("id x",                                           "x")
+	-- 	, ("true (false a y) a",                             "y")
+	-- 	, ("+ (succ (succ 0)) (succ 0)",                     "(succ (succ (succ 0)))")
+	-- 	, ("show (+ (succ (succ 0)) (succ 0))",              "3")
+	-- 	, ("show (fac (succ (succ (succ (succ 0",            "24")
+	-- 	-- , ("show (fac (succ (succ (succ (succ (succ 0",      "120")
+	-- 	-- , ("show (fac (succ (succ (succ (succ (succ (succ 0","720") -- ACTUALLY HALTS XD
+	-- 	, ("true skipped (show (fac (succ (succ (succ (succ (succ 0", "skipped") -- LAZY
+	-- 	, ("> (succ 0) (succ (succ 0))",                     "false")
+	-- 	, ("> inf (succ (succ 0))",                          "true")
+	-- 	, ("> (succ (succ 0)) inf",                          "false")
+	-- 	]
+	-- ),
+	-- (
+	-- 	[
+	-- 	  "#a + #b -> $add a b"
+	-- 	, "#a * #b -> $mult a b"
+	-- 	, "#a + (#b + w) -> (a + b) + w"
+	-- 	, "#a * (#b * w) -> (a * b) * w"
+	-- 	, "(+ y) -> y"
+	-- 	, "(x +) -> x"
+	-- 	, "(#x + +) -> x"
 
-		-- prioritizing
-		, "{xs} + a b {bs} -> {xs} + (a b {bs})"
-		, "a b {bs} + {xs} -> (a b {bs}) + {xs}"
-		, "{as} * x y {ys} -> {as} * (x y {ys})"
-		, "x y {ys} * {as} -> (x y {ys}) * {as}"
+	-- 	-- prioritizing
+	-- 	, "{xs} + a b {bs} -> {xs} + (a b {bs})"
+	-- 	, "a b {bs} + {xs} -> (a b {bs}) + {xs}"
+	-- 	, "{as} * x y {ys} -> {as} * (x y {ys})"
+	-- 	, "x y {ys} * {as} -> (x y {ys}) * {as}"
 
-		, "0 * x -> 0"
-		, "1 * x -> x"
-		, "0 + x -> x"
+	-- 	, "0 * x -> 0"
+	-- 	, "1 * x -> x"
+	-- 	, "0 + x -> x"
 
-		-- commutative
-		, "a + b -> b + a | b < a"
-		, "a * b -> b * a | b < a"
-		, "a + (b + c) -> b + (a + c) | b < a"
-		, "a * (b * c) -> b * (a * c) | b < a"
+	-- 	-- commutative
+	-- 	, "a + b -> b + a | b < a"
+	-- 	, "a * b -> b * a | b < a"
+	-- 	, "a + (b + c) -> b + (a + c) | b < a"
+	-- 	, "a * (b * c) -> b * (a * c) | b < a"
 
-		-- associative
-		, "(a + b) + c -> (a + (b + c))"
-		, "(a * b) * c -> (a * (b * c))"
+	-- 	-- associative
+	-- 	, "(a + b) + c -> (a + (b + c))"
+	-- 	, "(a * b) * c -> (a * (b * c))"
 
-		-- adding symbols with coefficients
-		, "(#a * x) + (#b * x) -> (a + b) * x"
-		, "(#a * x) + ((#b * x) + w) -> (a + b) * x + w"
-		, "x + (#b * x) -> (1 + b) * x"
-		, "x + ((#b * x) + w) -> (1 + b) * x + w"
+	-- 	-- adding symbols with coefficients
+	-- 	, "(#a * x) + (#b * x) -> (a + b) * x"
+	-- 	, "(#a * x) + ((#b * x) + w) -> (a + b) * x + w"
+	-- 	, "x + (#b * x) -> (1 + b) * x"
+	-- 	, "x + ((#b * x) + w) -> (1 + b) * x + w"
 
-		, "c * (x + y) -> (c * x) + (c * y)"         -- distributive
-		]
-	,
-		[
-		  ("6",                                                "6")
-		, ("a * b * c",                                        "(a * (b * c))")
-		, ("2 + 2 * 2",                                        "6")
-		, ("(1 + 2 + 3 * kek + 5) * (  2 + 3) + 2",            "(42 + (15 * kek))")
-		, ("1 + 2 + 3",                                        "6")
-		, ("+ 1 + 2 + 3",                                      "6")
-		, ("+ 1 * 2 * 3",                                      "6")
-		, ("2 + 2 * 2",                                        "6")
-		, ("2 * 2 + 2",                                        "6")
-		, ("1 + 2 * 3",                                        "7")
-		, ("1 * 2 + 3",                                        "5")
-		, ("1 * 2 + + + + + 3",                                "5")
-		, ("+ 1 * 2 + + 3",                                    "5")
-		, ("1 + ( 2 * 3)",                                     "7")
-		, ("22 + 33",                                          "55")
-		, ("3 * x + (1 * x + 5 * x)",                          "(9 * x)")
-		, ("3 * x + (1 * x + 1 + 5 * x)",                      "(1 + (9 * x))")
-		, ("3 * x + 3 + 5 * x + 10 + (1 * x + 1 + 5 * x)",     "(14 + (14 * x))")
-		, ("3 * x + 3 + 3 * x + 3 * z",                        "(3 + ((6 * x) + (3 * z)))")
-		, ("3 * (3 * z)",                                      "(9 * z)")
-		, ("3 * ( + + + 2 + + + + + 3 * z )",                  "(6 + (9 * z))")
-		, ("bcd + ab",                                         "(ab + bcd)")
-		, ("4 * Head + 3",                                     "(3 + (4 * Head))")
-		, ("23Kappa + 3",                                      "(3 + 23Kappa)")
-		, ("(2 * x + 1 + 2 * x + 3 * x + 5 * x)",              "(1 + (12 * x))")
-		, ("1 + (2 * x + 3 + (3 * x + 5))",                          "(9 + (5 * x))")
-		, ("1 + (2 * x + 3 + 9 + 20 + (3 * x + 5 + (1 + 2 + 3))))",  "(44 + (5 * x))")
-		, ("(a + b) * (b + c)",                                "((a * b) + ((b * b) + ((a * c) + (b * c))))")
-		, ("(3 + 4 * z) * ( 2 + 3 * z)",                       "(6 + ((17 * z) + (12 * (z * z))))")
-		, ("1 + 0 * (3 + x)",                                  "1")
-		, ("(0 + 1) * (3 + x)",                                "(3 + x)")
-		, ("0 * x + y",                                        "y")
-		, ("3 * y + 0 * x",                                    "(3 * y)")
-		]
+	-- 	, "c * (x + y) -> (c * x) + (c * y)"         -- distributive
+	-- 	]
+	-- ,
+	-- 	[
+	-- 	  ("6",                                                "6")
+	-- 	, ("a * b * c",                                        "(a * (b * c))")
+	-- 	, ("2 + 2 * 2",                                        "6")
+	-- 	, ("(1 + 2 + 3 * kek + 5) * (  2 + 3) + 2",            "(42 + (15 * kek))")
+	-- 	, ("1 + 2 + 3",                                        "6")
+	-- 	, ("+ 1 + 2 + 3",                                      "6")
+	-- 	, ("+ 1 * 2 * 3",                                      "6")
+	-- 	, ("2 + 2 * 2",                                        "6")
+	-- 	, ("2 * 2 + 2",                                        "6")
+	-- 	, ("1 + 2 * 3",                                        "7")
+	-- 	, ("1 * 2 + 3",                                        "5")
+	-- 	, ("1 * 2 + + + + + 3",                                "5")
+	-- 	, ("+ 1 * 2 + + 3",                                    "5")
+	-- 	, ("1 + ( 2 * 3)",                                     "7")
+	-- 	, ("22 + 33",                                          "55")
+	-- 	, ("3 * x + (1 * x + 5 * x)",                          "(9 * x)")
+	-- 	, ("3 * x + (1 * x + 1 + 5 * x)",                      "(1 + (9 * x))")
+	-- 	, ("3 * x + 3 + 5 * x + 10 + (1 * x + 1 + 5 * x)",     "(14 + (14 * x))")
+	-- 	, ("3 * x + 3 + 3 * x + 3 * z",                        "(3 + ((6 * x) + (3 * z)))")
+	-- 	, ("3 * (3 * z)",                                      "(9 * z)")
+	-- 	, ("3 * ( + + + 2 + + + + + 3 * z )",                  "(6 + (9 * z))")
+	-- 	, ("bcd + ab",                                         "(ab + bcd)")
+	-- 	, ("4 * Head + 3",                                     "(3 + (4 * Head))")
+	-- 	, ("23Kappa + 3",                                      "(3 + 23Kappa)")
+	-- 	, ("(2 * x + 1 + 2 * x + 3 * x + 5 * x)",              "(1 + (12 * x))")
+	-- 	, ("1 + (2 * x + 3 + (3 * x + 5))",                          "(9 + (5 * x))")
+	-- 	, ("1 + (2 * x + 3 + 9 + 20 + (3 * x + 5 + (1 + 2 + 3))))",  "(44 + (5 * x))")
+	-- 	, ("(a + b) * (b + c)",                                "((a * b) + ((b * b) + ((a * c) + (b * c))))")
+	-- 	, ("(3 + 4 * z) * ( 2 + 3 * z)",                       "(6 + ((17 * z) + (12 * (z * z))))")
+	-- 	, ("1 + 0 * (3 + x)",                                  "1")
+	-- 	, ("(0 + 1) * (3 + x)",                                "(3 + x)")
+	-- 	, ("0 * x + y",                                        "y")
+	-- 	, ("3 * y + 0 * x",                                    "(3 * y)")
+	-- 	]
 	)
 	]
 
