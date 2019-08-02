@@ -48,9 +48,7 @@ replaceWithDict dict replace = case replace of
 			case r of
 				(RVar token) ->
 					case bindingGet dict token of
-						Just t -> case t of
-							[x] -> x : loop rs
-							xs -> xs ++ loop rs -- Flattening the varargs
+						Just vs -> vs ++ loop rs -- Flattening the varargs
 						Nothing -> (Leaf token) : loop rs
 				(RGroup childs) -> replaceRgroup childs : loop rs
 
