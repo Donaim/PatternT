@@ -9,36 +9,24 @@ import PatternT.Util
 
 type BindingDict = Dict String [Tree]
 
-builtInSimplifyName :: String
-builtInSimplifyName = "$simplify"
-
 checkCond :: (Tree -> Maybe Tree) -> BindingDict -> Conditional -> Bool
 checkCond simplifyF dict cond = case cond of
 	(EqCond left right) ->
-		simplifiedOnDemand (replaceWithDict dict left)
-			== simplifiedOnDemand (replaceWithDict dict right)
+		simplify (replaceWithDict dict left)
+			== simplify (replaceWithDict dict right)
 	(NeqCond left right) ->
-		simplifiedOnDemand (replaceWithDict dict left)
-			/= simplifiedOnDemand (replaceWithDict dict right)
-	(_) -> False
-	where
-	simplifiedOnDemand t = simplifiedTree (simplifiedOnce t)
+		simplify (replaceWithDict dict left)
+			/= simplify (replaceWithDict dict right)
+	(NotmatchCond left right) ->
+		isNothing $ matchWithDict dict right $ simplify (replaceWithDict dict left)
+	(LTCond left right) ->
+		replaceWithDict dict left
+			< replaceWithDict dict right
+	(LECond left right) ->
+		replaceWithDict dict left
+			<= replaceWithDict dict right
 
-	-- Enables top-level patterns to insert $simplify rules that are going to be processed later. Example $equal implementation: $equal a b -> ($eq ($simplify a) ($simplify b))
-	simplifiedOnce t = case simplifyF t of
-		Nothing -> t
-		Just newt -> newt
-
-	simplifyRule t = case t of
-		(Branch [Leaf first, arg]) ->
-			if first == builtInSimplifyName
-			then case simplifyF arg of
-				Just new -> Just new
-				Nothing -> Just arg -- NOTE: Always stripping the $simplify function
-			else Nothing
-		(_) -> Nothing
-
-	simplifiedTree t = applySimplificationsUntil0LastF simplifyRule t
+	where simplify = applySimplificationsUntil0LastF simplifyF
 
 matchAndReplace :: (Tree -> Maybe Tree) -> SimplifyPattern -> Tree -> Maybe Tree
 matchAndReplace simplifyF (match, replace, conds) t =
