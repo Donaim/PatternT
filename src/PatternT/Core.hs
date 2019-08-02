@@ -17,9 +17,6 @@ checkCond simplifyF dict cond = case cond of
 	(NeqCond left right) ->
 		simplify (replaceWithDict dict left)
 			/= simplify (replaceWithDict dict right)
-	(NotmatchCond left right) ->
-		isNothing $ matchWithDict dict right $ simplify (replaceWithDict dict left)
-
 	where simplify = applySimplificationsUntil0LastF simplifyF
 
 matchAndReplace :: (Tree -> Maybe Tree) -> SimplifyPattern -> Tree -> Maybe Tree

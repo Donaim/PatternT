@@ -39,7 +39,6 @@ data PatternReplacePart
 data Conditional
 	= EqCond PatternReplacePart PatternReplacePart
 	| NeqCond PatternReplacePart PatternReplacePart
-	| NotmatchCond PatternReplacePart PatternMatchPart
 	deriving (Eq, Show, Read)
 
 type SimplifyPattern = (PatternMatchPart, PatternReplacePart, [Conditional])

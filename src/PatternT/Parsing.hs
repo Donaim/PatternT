@@ -122,7 +122,6 @@ parseCond' :: [Expr] -> Either ParseMatchError Conditional
 parseCond' exprs = swapEither $ do
 	tryTwoReplacements "==" EqCond
 	tryTwoReplacements "!=" NeqCond
-	matchTry
 
 	where
 	tryTwoReplacements :: String -> (PatternReplacePart -> PatternReplacePart -> Conditional) -> Either Conditional ParseMatchError
@@ -132,13 +131,6 @@ parseCond' exprs = swapEither $ do
 			rleft <- parseReplacePart' left
 			rright <- parseReplacePart' right
 			return (constructor rleft rright)
-
-	matchTry = case partitionExpr "!>" exprs of
-		(left, Nothing, right) -> Right $ CondExpected exprs
-		(left, Just eq, right) -> swapEither $ do
-			rleft <- parseReplacePart' left
-			rright <- parseMatchPart' right
-			return (NotmatchCond rleft rright)
 
 partitionExpr :: String -> [Expr] -> ([Expr], Maybe Expr, [Expr])
 partitionExpr break exprs =

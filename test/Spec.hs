@@ -42,7 +42,6 @@ coms = [
 		, "x * y -> $mult x y"
 		, "<2 x -> true | $equal (x * x) x == True"
 		, "<2 x -> false | $equal (x * x) x == False"
-		, "x % #y -> y | x !> #k"
 		, "\"one two\" -> \"one-two\""
 		, "'two  tree' -> \"two-tree\""
 		, "(a -> b) -> b"
@@ -63,8 +62,6 @@ coms = [
 		, ("<2 1",                                             "true")
 		, ("<2 3",                                             "false")
 		, ("(1 + 1) * a",                                      "($mult 2 a)")
-		, ("a % 5",                                            "5")
-		, ("4 % 5",                                            "(4 % 5)")
 		, ("\"one two\" % b",                                  "(one-two % b)")
 		, ("\"two  tree\" % b",                                "(two-tree % b)")
 		, ("(a -> b) -> c",                                      "c")
