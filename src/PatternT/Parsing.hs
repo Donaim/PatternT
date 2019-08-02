@@ -120,8 +120,8 @@ parseMatch text = case tokenize text of
 
 parseCond' :: [Expr] -> Either ParseMatchError Conditional
 parseCond' exprs = swapEither $ do
-	tryTwoReplacements "==" EqCond
-	tryTwoReplacements "!=" NeqCond
+	_ <- tryTwoReplacements "==" EqCond
+	_ <- tryTwoReplacements "!=" NeqCond
 
 	swapEither $ do
 		rleft <- parseReplacePart' exprs

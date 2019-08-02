@@ -26,6 +26,9 @@ library:
   source-dirs: src
 
 ghc-options:
+- -Wall
+- -Wno-orphans
+- -Wno-unused-matches
 - -Wno-name-shadowing
 - -Wno-tabs
 - -Wincomplete-patterns
