@@ -76,7 +76,7 @@ matchWithDict dict match t =
 		(MatchGroup p ps) ->
 			case t of
 				(Branch xs) ->
-					matchGroups dict (p : ps) xs >>= (return . bindingConcat dict)
+					matchGroups dict (p : ps) xs
 				(Leaf x) ->
 					Nothing
 
