@@ -24,8 +24,6 @@ data PatternMatchPart
 	| MatchGroup PatternMatchPart [PatternMatchPart]
 	deriving (Eq, Show, Read)
 
-type Number = Rational
-
 data PatternReplacePart
 	= RVar Symbol
 	| RGroup [PatternReplacePart]
