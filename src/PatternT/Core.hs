@@ -17,6 +17,12 @@ checkCond simplifyF dict cond = case cond of
 	(NeqCond left right) ->
 		simplify (replaceWithDict dict left)
 			/= simplify (replaceWithDict dict right)
+	(LTCond left right) ->
+		replaceWithDict dict left
+			< replaceWithDict dict right
+	(LECond left right) ->
+		replaceWithDict dict left
+			<= replaceWithDict dict right
 	where simplify t = maybeDefault t simplifyF
 
 matchAndReplace :: (Tree -> Maybe Tree) -> SimplifyPattern -> Tree -> Maybe Tree
@@ -203,3 +209,21 @@ monadicApplyTreeOne func t = case t of
 						(Branch [x]) -> (Branch (previus ++ [x] ++ cs)) -- NOTE: erasing singletons! NOTE: the top level tree can still be a singleton, but that's ok since we will match its children anyway
 						(_) -> (Branch (previus ++ [newc] ++ cs))
 				Nothing -> loop (previus ++ [c]) cs
+
+--------------
+-- ORDERING --
+--------------
+
+instance Ord Tree where
+	compare a b =
+		case a of
+			(Leaf as) -> case b of
+				(Leaf bs) ->
+					compare as bs
+				(Branch {}) ->
+					LT -- ASSUMPTION: no singleton branches
+			(Branch xs) -> case b of
+				(Leaf {}) ->
+					GT -- ASSUMPTION: no singleton branches
+				(Branch ys) ->
+					compare (reverse xs) (reverse ys) -- NOTE: the size of branch is the secondary thing, the most important is LAST element of branch

@@ -122,6 +122,8 @@ parseCond' :: [Expr] -> Either ParseMatchError Conditional
 parseCond' exprs = swapEither $ do
 	_ <- tryTwoReplacements "==" EqCond
 	_ <- tryTwoReplacements "!=" NeqCond
+	_ <- tryTwoReplacements "<" LTCond
+	_ <- tryTwoReplacements "<=" LECond
 
 	swapEither $ do
 		rleft <- parseReplacePart' exprs

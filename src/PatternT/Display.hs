@@ -27,6 +27,8 @@ stringifyReplacePart t = case t of
 stringifyCond :: Conditional -> String
 stringifyCond (EqCond a b) = stringifyReplacePart a ++ " == " ++ stringifyReplacePart b
 stringifyCond (NeqCond a b) = stringifyReplacePart a ++ " != " ++ stringifyReplacePart b
+stringifyCond (LTCond a b) = stringifyReplacePart a ++ " < " ++ stringifyReplacePart b
+stringifyCond (LECond a b) = stringifyReplacePart a ++ " <= " ++ stringifyReplacePart b
 
 stringifySimplifyPattern :: SimplifyPattern -> String
 stringifySimplifyPattern (match, replace, conds) =
