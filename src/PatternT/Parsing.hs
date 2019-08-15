@@ -78,6 +78,35 @@ takeQuoted qchar str = loop False [] str
 				then loop False (x : '\\' : buf) xs
 				else loop False (x : buf) xs
 
+-- | Usage: delimitSymbols b ["+", "**"] "1+2**3" -> "1 + 2 ** 3"
+delimitSymbols :: Bool -> [String] -> String -> String
+delimitSymbols ignoreQuotes delimiters text =
+	if ignoreQuotes
+	then foldr folder "" text
+	else concat parts
+	where
+	parts = loop [] "" text
+		where
+		loop buf cur [] =
+			let delimited = if null cur then [] else delimitSymbols True delimiters (reverse cur)
+			in let newBuf = if null cur then buf else (delimited : buf)
+			in reverse newBuf
+		loop buf cur (x : xs) =
+			if x == '\'' || x == '\"'
+			then let (q, next) = takeQuoted x xs
+			in let delimited = if null cur then [] else delimitSymbols True delimiters (reverse cur)
+				in let newBuf = if null cur then ((x : q ++ [x]) : buf) else ((x : q ++ [x]) : delimited : buf) -- ASSUMPTION: missing endquote is the same as with endquote
+				in loop newBuf "" next
+			else loop buf (x : cur) xs
+
+	sorted = reverse $ sortOn length delimiters
+
+	folder :: Char -> String -> String
+	folder c acc = case find (`isPrefixOf` joined) sorted of
+		Nothing -> joined
+		Just del -> ' ' : (del ++ (' ' : drop (length del) joined))
+		where joined = c : acc
+
 makeTree :: Expr -> Tree
 makeTree expr = case expr of
 	Atom sym -> Leaf sym
