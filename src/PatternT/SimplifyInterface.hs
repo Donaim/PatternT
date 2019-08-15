@@ -168,13 +168,6 @@ mixedApplySimplificationsWithPureUntil0Debug simplifications ctx0 t0 = loop ctx0
 -- UTILS --
 -----------
 
--- liftPure :: (Monad m) => String -> (Tree -> Maybe Tree) -> MonadicSimplify m ctx
--- liftPure name pure = (name, func)
--- 	where
--- 	func ctx t = return $ case pure t of
--- 		Nothing -> Nothing
--- 		Just newt -> Just (ctx, newt)
-
 withFunctionNameCheck :: b -> (String, Tree -> b) -> (Tree -> b)
 withFunctionNameCheck defaul (name, func) tree = case tree of -- NOTE: in simplify function we always check the name!
 	(Leaf s) ->
