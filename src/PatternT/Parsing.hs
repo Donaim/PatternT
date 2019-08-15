@@ -11,11 +11,13 @@ import PatternT.Types
 import PatternT.Util
 
 tokenize :: String -> Either ParseError [Expr]
-tokenize s = case rest of
-	[] -> Right $ reverse exprs
-	xs -> Left $ FreeTokensAfterClose xs
+tokenize s = Right $ tokenize' s
 	where
 	(exprs, rest) = loop [] "" s
+
+	tokenize' s = case rest of
+		[] -> reverse exprs
+		xs -> (Group (reverse exprs)) : tokenize' rest
 
 	loop :: [Expr] -> String -> String -> ([Expr], String)
 	loop buffer cur text = case text of

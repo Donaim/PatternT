@@ -13,8 +13,7 @@ data Tree
 	| Branch [Tree]
 	deriving (Eq, Show, Read)
 
-data ParseError
-	= FreeTokensAfterClose String
+data ParseError = ParseError
 	deriving (Eq, Show, Read)
 
 data PatternMatchPart
