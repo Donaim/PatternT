@@ -82,22 +82,22 @@ takeQuoted qchar str = loop False [] str
 				else loop False (x : buf) xs
 
 -- | Usage: delimitSymbols b ["+", "**"] "1+2**3" -> "1 + 2 ** 3"
-delimitSymbols :: Bool -> [String] -> String -> String
-delimitSymbols ignoreQuotes delimiters text =
-	if ignoreQuotes
+delimitSymbols :: DelimiterOpts -> [String] -> String -> String
+delimitSymbols opts delimiters text =
+	if opts == DelimiterIgnoreQuotes
 	then foldr folder "" text
 	else concat parts
 	where
 	parts = loop [] "" text
 		where
 		loop buf cur [] =
-			let delimited = if null cur then [] else delimitSymbols True delimiters (reverse cur)
+			let delimited = if null cur then [] else delimitSymbols DelimiterIgnoreQuotes delimiters (reverse cur)
 			in let newBuf = if null cur then buf else (delimited : buf)
 			in reverse newBuf
 		loop buf cur (x : xs) =
 			if x == '\'' || x == '\"'
 			then let (q, next) = takeQuoted x xs
-			in let delimited = if null cur then [] else delimitSymbols True delimiters (reverse cur)
+			in let delimited = if null cur then [] else delimitSymbols DelimiterIgnoreQuotes delimiters (reverse cur)
 				in let newBuf = if null cur then ((x : q ++ [x]) : buf) else ((x : q ++ [x]) : delimited : buf) -- ASSUMPTION: missing endquote is the same as with endquote
 				in loop newBuf "" next
 			else loop buf (x : cur) xs

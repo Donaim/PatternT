@@ -50,6 +50,11 @@ data Either3 a b c
 	| Middle3 b
 	| Right3 c
 
+data DelimiterOpts
+	= DelimiterIgnoreQuotes
+	| DelimiterPreserveQuotes
+	deriving (Eq, Show, Read)
+
 -- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the read-write context that is carried around. The monadic action also recieves aggregated simplify function
 type MonadicSimplify m ctx = (String, (Tree -> Maybe Tree) -> ctx -> Tree -> m (Maybe (ctx, Tree)))
 
