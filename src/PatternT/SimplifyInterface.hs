@@ -111,19 +111,19 @@ mixedApplyFirstSimplificationWithSimplify simplify simplifications ctx t0 = loop
 	loop simplifications t = case simplifications of
 		[] -> return Nothing
 		(simpl : xs) -> case simpl of
-				Tuple30 pattern ->
+				Left3 pattern ->
 					let r = applyTreeOne (matchAndReplace simplify pattern) t
 					in case r of
 						Just newt -> return $ Just (newt, Left pattern, ctx)
 						Nothing -> loop xs t
 
-				Tuple31 (name, func) -> do
+				Middle3 (name, func) -> do
 					r <- monadicApplyTreeOne (monadicMatchAndReplace name (func simplify ctx)) t
 					case r of
 						Just (newCtx, newt) -> return $ Just (newt, Right name, newCtx)
 						Nothing -> loop xs t
 
-				Tuple32 (name, func) ->
+				Right3 (name, func) ->
 					let r = applyTreeOne (withFunctionNameCheck Nothing (name, func simplify)) t
 					in case r of
 						Just newt -> return $ Just (newt, Right name, ctx)
@@ -196,6 +196,6 @@ makePureSimplify simplifications = firstAggregated
 	collectSimplify :: [SimplificationF m ctx] -> [(Tree -> Maybe Tree)]
 	collectSimplify [] = []
 	collectSimplify (f : fs) = case f of
-		Tuple30 pattern -> (applyPattern pattern) : collectSimplify fs
-		Tuple31 {} -> collectSimplify fs
-		Tuple32 (name, func) -> (withFunctionNameCheck Nothing (name, func firstAggregated)) : collectSimplify fs
+		Left3 pattern -> (applyPattern pattern) : collectSimplify fs
+		Middle3 {} -> collectSimplify fs
+		Right3 (name, func) -> (withFunctionNameCheck Nothing (name, func firstAggregated)) : collectSimplify fs

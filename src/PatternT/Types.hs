@@ -45,10 +45,10 @@ data ParseMatchError
 	| TokenizeError ParseError
 	deriving (Eq, Show, Read)
 
-data Tuple3 a b c
-	= Tuple30 a
-	| Tuple31 b
-	| Tuple32 c
+data Either3 a b c
+	= Left3 a
+	| Middle3 b
+	| Right3 c
 
 -- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the read-write context that is carried around. The monadic action also recieves aggregated simplify function
 type MonadicSimplify m ctx = (String, (Tree -> Maybe Tree) -> ctx -> Tree -> m (Maybe (ctx, Tree)))
@@ -57,6 +57,6 @@ type MonadicSimplify m ctx = (String, (Tree -> Maybe Tree) -> ctx -> Tree -> m (
 type PureSimplificationF = (String, (Tree -> Maybe Tree) -> Tree -> Maybe Tree)
 
 -- | General simplification possibilities
-type SimplificationF m ctx = Tuple3 SimplifyPattern (MonadicSimplify m ctx) PureSimplificationF
+type SimplificationF m ctx = Either3 SimplifyPattern (MonadicSimplify m ctx) PureSimplificationF
 
 type SimplifyTraceElem = Either SimplifyPattern String
