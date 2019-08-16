@@ -4,11 +4,6 @@ module PatternT.Util where
 import Text.Read (readMaybe)
 import PatternT.Types
 
-maybeDefault :: a -> (a -> Maybe a) -> a
-maybeDefault x f = case f x of
-	Just y -> y
-	Nothing -> x
-
 maybeHead :: [a] -> Maybe a
 maybeHead [] = Nothing
 maybeHead (x : xs) = Just x

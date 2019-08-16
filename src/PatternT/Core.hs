@@ -5,7 +5,6 @@ import Data.Maybe
 import Data.Either
 import PatternT.Types
 import PatternT.Dict
-import PatternT.Util
 
 type BindingDict = Dict String [Tree]
 
@@ -23,7 +22,7 @@ checkCond simplifyF dict cond = case cond of
 	(LECond left right) ->
 		replaceWithDict dict left
 			<= replaceWithDict dict right
-	where simplify t = maybeDefault t simplifyF
+	where simplify t = maybe t id (simplifyF t)
 
 matchAndReplace :: (Tree -> Maybe Tree) -> SimplifyPattern -> Tree -> Maybe Tree
 matchAndReplace simplifyF (match, replace, conds) t =
