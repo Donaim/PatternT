@@ -36,7 +36,7 @@ matchAndReplace simplifyF (match, replace, conds) t =
 replaceWithDict :: BindingDict -> PatternReplacePart -> Tree
 replaceWithDict dict replace = case replace of
 	(RVar token) ->
-		case bindingGet dict token of
+		case dictGet dict token of
 			Just t -> case t of
 				[x] -> x
 				xs -> Branch xs
@@ -52,7 +52,7 @@ replaceWithDict dict replace = case replace of
 		loop (r : rs) =
 			case r of
 				(RVar token) ->
-					case bindingGet dict token of
+					case dictGet dict token of
 						Just vs -> vs ++ loop rs -- Flattening the varargs
 						Nothing -> (Leaf token) : loop rs
 				(RGroup childs) -> replaceRgroup childs : loop rs
@@ -70,7 +70,7 @@ matchWithDict dict match t =
 			case t of
 				(Leaf symName) ->
 					if bindName == symName
-					then Just (bindingAdd dict bindName [t])
+					then Just (dictAdd dict bindName [t])
 					else Nothing -- Names don't match
 				(Branch {}) -> -- This is not a singleton branch, so we dont ever match it
 					Nothing
@@ -87,13 +87,13 @@ matchWithDict dict match t =
 
 matchVariable :: BindingDict -> Symbol -> Tree -> Maybe BindingDict
 matchVariable dict bindName t =
-	case bindingGet dict bindName of
+	case dictGet dict bindName of
 		Just [value] ->
 			if t == value
-			then Just (bindingAdd dict bindName [t])
+			then Just (dictAdd dict bindName [t])
 			else Nothing
 		(_) ->
-			Just (bindingAdd dict bindName [t])
+			Just (dictAdd dict bindName [t])
 
 matchGroups :: BindingDict -> [PatternMatchPart] -> [Tree] -> Maybe BindingDict
 matchGroups dict [] [] = Just dict
@@ -112,8 +112,8 @@ matchGroups dict (p : ps) (t : ts) = case p of
 			if variableDiff < 0
 			then Nothing
 			else case followingExactMatches of
-				[] -> Just $ bindingAdd dictWithVariables bindName dropedVariables ++ followingVaradictMatches
-				ms -> let newDict = bindingAdd dictWithVariables bindName dropedVariables
+				[] -> Just $ dictAdd dictWithVariables bindName dropedVariables ++ followingVaradictMatches
+				ms -> let newDict = dictAdd dictWithVariables bindName dropedVariables
 					in matchGroups newDict ps rest
 
 			where
@@ -125,7 +125,7 @@ matchGroups dict (p : ps) (t : ts) = case p of
 		notVaradic = case matchWithDict dict p t of
 			Nothing -> Nothing
 			Just retDict ->
-				let newDict = bindingConcat dict retDict
+				let newDict = dictConcat dict retDict
 				in matchGroups newDict ps ts
 
 		followingVaradictMatches = loop ps -- NOTE: these did not match anything
