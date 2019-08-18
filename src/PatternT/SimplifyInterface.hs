@@ -150,13 +150,14 @@ applySimplificationsUntil0Debug patterns0 t0 = loop patterns0 t0
 		Just (newt, rule) -> (newt, rule) : loop patterns newt
 
 mixedApplySimplificationsUntil0Debug :: (Monad m) =>
+	Maybe Int ->
 	[SimplificationF m ctx] ->
 	ctx ->
 	Tree ->
 	m [(Tree, Either SimplifyPattern String, ctx)]
-mixedApplySimplificationsUntil0Debug simplifications ctx0 t0 = loop ctx0 t0
+mixedApplySimplificationsUntil0Debug condRecLimit simplifications ctx0 t0 = loop ctx0 t0
 	where
-	simplifies = makeSimplifiesFromMixed simplifications
+	simplifies = makeSimplifiesFromMixed condRecLimit simplifications
 	loop ctx t = do
 		r <- mixedApplyFirstSimplification simplifies simplifications ctx t
 		case r of
@@ -185,20 +186,26 @@ withFunctionNameCheck defaul (name, func) tree = case tree of -- NOTE: in simpli
 	(_) -> defaul
 
 -- | Using mixed rules, take pure ones and make simplify functions from them to use in Conditionals
-makeSimplifiesFromMixed :: (Monad m) => [SimplificationF m ctx] -> [Tree -> Maybe Tree]
-makeSimplifiesFromMixed simplifications = firstAggregated
+makeSimplifiesFromMixed :: (Monad m) => Maybe Int -> [SimplificationF m ctx] -> [Tree -> Maybe Tree]
+makeSimplifiesFromMixed condRecLimit simplifications = maybe unlimited (limited 0) condRecLimit
 	where
-	firstAggregated = collectSimplify simplifications
+	limited :: Int -> Int -> [Tree -> Maybe Tree]
+	limited n limit = if n >= limit then [] else withrec (limited (n + 1) limit)
 
-	applyPattern :: SimplifyPattern -> (Tree -> Maybe Tree)
-	applyPattern pattern = matchAndReplace firstAggregated pattern
+	unlimited :: [Tree -> Maybe Tree]
+	unlimited = withrec unlimited
 
-	collectSimplify :: [SimplificationF m ctx] -> [(Tree -> Maybe Tree)]
-	collectSimplify [] = []
-	collectSimplify (f : fs) = case f of
-		Left3 pattern -> (applyPattern pattern) : collectSimplify fs
-		Middle3 {} -> collectSimplify fs
-		Right3 (name, func) -> (withFunctionNameCheck Nothing (name, func firstAggregated)) : collectSimplify fs
+	withrec firstAggregated = collectSimplify simplifications
+		where
+		applyPattern :: SimplifyPattern -> (Tree -> Maybe Tree)
+		applyPattern pattern = matchAndReplace firstAggregated pattern
+
+		collectSimplify :: [SimplificationF m ctx] -> [(Tree -> Maybe Tree)]
+		collectSimplify [] = []
+		collectSimplify (f : fs) = case f of
+			Left3 pattern -> (applyPattern pattern) : collectSimplify fs
+			Middle3 {} -> collectSimplify fs
+			Right3 (name, func) -> (withFunctionNameCheck Nothing (name, func firstAggregated)) : collectSimplify fs
 
 makeSimplifies :: [SimplifyPattern] -> [Tree -> Maybe Tree]
 makeSimplifies patterns = let f = map (matchAndReplace f) patterns in f
