@@ -8,8 +8,8 @@ import PatternT.Dict
 
 type BindingDict = Dict String [Tree]
 
-checkCond :: (Tree -> Maybe Tree) -> BindingDict -> Conditional -> Bool
-checkCond simplifyF dict cond = case cond of
+checkCond :: [Tree -> Maybe Tree] -> BindingDict -> Conditional -> Bool
+checkCond simplifies dict cond = case cond of
 	(EqCond left right) ->
 		simplify (replaceWithDict dict left)
 			== simplify (replaceWithDict dict right)
@@ -22,14 +22,14 @@ checkCond simplifyF dict cond = case cond of
 	(LECond left right) ->
 		replaceWithDict dict left
 			<= replaceWithDict dict right
-	where simplify t = maybe t id (simplifyF t)
+	where simplify t = maybe t id (listToMaybe $ catMaybes $ map ($ t) simplifies) -- apply first simplify function, not recursive NOTE: can match a recursive builtin
 
-matchAndReplace :: (Tree -> Maybe Tree) -> SimplifyPattern -> Tree -> Maybe Tree
-matchAndReplace simplifyF (match, replace, conds) t =
+matchAndReplace :: [Tree -> Maybe Tree] -> SimplifyPattern -> Tree -> Maybe Tree
+matchAndReplace simplifies (match, replace, conds) t =
 	case matchGetDict match t of
 		Nothing -> Nothing
 		Just dict ->
-			if all (checkCond simplifyF dict) conds
+			if all (checkCond simplifies dict) conds
 			then Just (replaceWithDict dict replace)
 			else Nothing
 
