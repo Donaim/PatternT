@@ -130,12 +130,13 @@ mixedApplyFirstSimplificationWithSimplify simplify simplifications ctx t0 = loop
 						Nothing -> loop xs t
 
 mixedApplyFirstSimplification :: (Monad m) =>
+	[Tree -> Maybe Tree] ->
 	[SimplificationF m ctx] ->
 	ctx ->
 	Tree ->
 	m (Maybe (Tree, Either SimplifyPattern String, ctx))
-mixedApplyFirstSimplification simplifications ctx t0 =
-		mixedApplyFirstSimplificationWithSimplify (makePureSimplify simplifications) simplifications ctx t0
+mixedApplyFirstSimplification simplifies simplifications ctx t0 =
+		mixedApplyFirstSimplificationWithSimplify simplifies simplifications ctx t0
 
 -----------
 -- LOOPS --
@@ -155,8 +156,9 @@ mixedApplySimplificationsUntil0Debug :: (Monad m) =>
 	m [(Tree, Either SimplifyPattern String, ctx)]
 mixedApplySimplificationsUntil0Debug simplifications ctx0 t0 = loop ctx0 t0
 	where
+	simplifies = makePureSimplify simplifications
 	loop ctx t = do
-		r <- mixedApplyFirstSimplification simplifications ctx t
+		r <- mixedApplyFirstSimplification simplifies simplifications ctx t
 		case r of
 			Nothing -> return []
 			Just (newt, rule, newCtx) -> do
