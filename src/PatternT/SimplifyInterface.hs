@@ -191,7 +191,7 @@ makePureSimplify simplifications = firstAggregated
 	firstAggregated = applyFirstSimplificationF (collectSimplify simplifications)
 
 	applyPattern :: SimplifyPattern -> (Tree -> Maybe Tree)
-	applyPattern pattern = applyTreeOne (matchAndReplace firstAggregated pattern) -- NOTE: dangerous
+	applyPattern pattern = matchAndReplace firstAggregated pattern
 
 	collectSimplify :: [SimplificationF m ctx] -> [(Tree -> Maybe Tree)]
 	collectSimplify [] = []
