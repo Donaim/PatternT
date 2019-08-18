@@ -16,6 +16,9 @@ checkCond simplifies dict cond = case cond of
 	(NeqCond left right) ->
 		simplify (replaceWithDict dict left)
 			/= simplify (replaceWithDict dict right)
+	(ImpliesCond left right) ->
+		simplify (replaceWithDict dict left)
+			== (replaceWithDict dict right)
 	(LTCond left right) ->
 		replaceWithDict dict left
 			< replaceWithDict dict right

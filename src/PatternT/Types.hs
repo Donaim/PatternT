@@ -31,6 +31,7 @@ data PatternReplacePart
 data Conditional
 	= EqCond PatternReplacePart PatternReplacePart
 	| NeqCond PatternReplacePart PatternReplacePart
+	| ImpliesCond PatternReplacePart PatternReplacePart
 	| LTCond PatternReplacePart PatternReplacePart
 	| LECond PatternReplacePart PatternReplacePart
 	deriving (Eq, Show, Read)

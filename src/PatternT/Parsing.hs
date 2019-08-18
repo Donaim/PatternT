@@ -156,13 +156,14 @@ parseCond' :: [Expr] -> Either ParseMatchError Conditional
 parseCond' exprs = swapEither $ do
 	_ <- tryTwoReplacements "==" EqCond
 	_ <- tryTwoReplacements "!=" NeqCond
+	_ <- tryTwoReplacements "->" ImpliesCond
 	_ <- tryTwoReplacements "<" LTCond
 	_ <- tryTwoReplacements "<=" LECond
 
 	swapEither $ do
 		rleft <- parseReplacePart' exprs
 		let rright = RVar "True"
-		return (EqCond rleft rright)
+		return (ImpliesCond rleft rright)
 
 	where
 	tryTwoReplacements :: String -> (PatternReplacePart -> PatternReplacePart -> Conditional) -> Either Conditional ParseMatchError
