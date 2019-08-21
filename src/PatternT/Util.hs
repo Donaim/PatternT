@@ -25,3 +25,16 @@ partitionEither3 = foldr (either3 f0 f1 f2) ([], [], [])
 		f0 a ~(l0, l1, l2) = (a : l0, l1, l2)
 		f1 a ~(l0, l1, l2) = (l0, a : l1, l2)
 		f2 a ~(l0, l1, l2) = (l0, l1, a : l2)
+
+replacePartToTree :: PatternReplacePart -> Tree
+replacePartToTree t = case t of
+	RVar x -> Leaf x
+	RGroup xs -> Branch (map replacePartToTree xs)
+
+conditionalToTrees :: Conditional -> (Tree, Tree, Tree)
+conditionalToTrees c = case c of
+	EqCond a b -> (replacePartToTree a, Leaf "==", replacePartToTree b)
+	NeqCond a b -> (replacePartToTree a, Leaf "/=", replacePartToTree b)
+	ImpliesCond a b -> (replacePartToTree a, Leaf "->", replacePartToTree b)
+	LTCond a b -> (replacePartToTree a, Leaf "<", replacePartToTree b)
+	LECond a b -> (replacePartToTree a, Leaf "<=", replacePartToTree b)

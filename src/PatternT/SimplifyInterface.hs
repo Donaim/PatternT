@@ -3,6 +3,7 @@
 module PatternT.SimplifyInterface where
 
 import Data.Either
+import Data.Maybe
 
 import PatternT.Types
 import PatternT.Core
@@ -100,31 +101,30 @@ monadicApplyFirstSimplification simplify simplifications ctx t0 = loop simplific
 -----------
 
 mixedApplyFirstSimplificationWithSimplify :: (Monad m) =>
-	[Tree -> Maybe Tree] ->
-	[SimplificationF m ctx] ->
+	[(SimplificationF m ctx, [Tree -> Maybe Tree])] ->
 	ctx ->
 	Tree ->
 	m (Maybe (Tree, Either SimplifyPattern String, ctx))
-mixedApplyFirstSimplificationWithSimplify simplify simplifications ctx t0 = loop simplifications t0
+mixedApplyFirstSimplificationWithSimplify simplifications ctx t0 = loop simplifications t0
 	where
 	-- loop :: [SimplificationF m ctx] -> Tree -> m (Maybe (Tree, Either SimplifyPattern String, ctx))
 	loop simplifications t = case simplifications of
 		[] -> return Nothing
-		(simpl : xs) -> case simpl of
+		((simpl, condSimpl) : xs) -> case simpl of
 			Left3 pattern ->
-				let r = applyTreeOne (matchAndReplace simplify pattern) t
+				let r = applyTreeOne (matchAndReplace condSimpl pattern) t
 				in case r of
 					Just newt -> return $ Just (newt, Left pattern, ctx)
 					Nothing -> loop xs t
 
 			Middle3 (name, func) -> do
-				r <- monadicApplyTreeOne (monadicMatchAndReplace name (func simplify ctx)) t
+				r <- monadicApplyTreeOne (monadicMatchAndReplace name (func condSimpl ctx)) t
 				case r of
 					Just (newCtx, newt) -> return $ Just (newt, Right name, newCtx)
 					Nothing -> loop xs t
 
 			Right3 (name, func) ->
-				let r = applyTreeOne (withFunctionNameCheck Nothing (name, func simplify)) t
+				let r = applyTreeOne (withFunctionNameCheck Nothing (name, func condSimpl)) t
 				in case r of
 					Just newt -> return $ Just (newt, Right name, ctx)
 					Nothing -> loop xs t
@@ -150,7 +150,7 @@ mixedApplySimplificationsUntil0Debug condRecLimit simplifications ctx0 t0 = loop
 	where
 	simplifies = makeSimplifiesFromMixed condRecLimit simplifications
 	loop ctx t = do
-		r <- mixedApplyFirstSimplificationWithSimplify simplifies simplifications ctx t
+		r <- mixedApplyFirstSimplificationWithSimplify simplifies ctx t
 		case r of
 			Nothing -> return []
 			Just (newt, rule, newCtx) -> do
@@ -176,20 +176,33 @@ withFunctionNameCheck defaul (name, func) tree = case tree of -- NOTE: in simpli
 			(_) -> defaul
 	(_) -> defaul
 
--- | Using mixed rules, take pure ones and make simplify functions from them to use in Conditionals
-makeSimplifiesFromMixed :: (Monad m) => Maybe Int -> [SimplificationF m ctx] -> [Tree -> Maybe Tree]
-makeSimplifiesFromMixed condRecLimit simplifications = maybe unlimited (limited 0) condRecLimit
+-- | Using mixed rules, take pure ones and make simplify functions for each rule from them to use in Conditionals
+-- This method has 2 features:
+--  * accepts optional "limit" value which makes it so that conditionals can be nested "limit" of times only
+--  * returned simplifications don't contain patterns that match their own conditionals. Ex: "True -> False | True" will not result in infinite recursion caused by conditionals simplifications. NOTE: unbound recursion can still be achieved if there is cyclic Conditional dependencies, ex: "1) p0 x -> 0 | p1 a ; 2) p1 x -> 1 | p0 x", but this is preventible by limit
+makeSimplifiesFromMixed :: (Monad m) => Maybe Int -> [SimplificationF m ctx] -> [(SimplificationF m ctx, [Tree -> Maybe Tree])]
+makeSimplifiesFromMixed condRecLimit simplifications = maybe (mapwithcur unlimited) (\ l -> map (\ s -> (s, limited s l 0)) simplifications) condRecLimit
 	where
-	limited :: Int -> Int -> [Tree -> Maybe Tree]
-	limited n limit = if n >= limit then [] else withrec (limited (n + 1) limit)
+	-- mapwithcur :: (SimplificationF m ctx -> [Tree -> Maybe Tree]) -> [(SimplificationF m ctx, [Tree -> Maybe Tree])]
+	mapwithcur f = map (\ s -> (s, f s)) simplifications
 
-	unlimited :: [Tree -> Maybe Tree]
-	unlimited = withrec unlimited
+	limited :: SimplificationF m ctx -> Int -> Int -> [Tree -> Maybe Tree]
+	limited current limit = let f n = if n >= limit then [] else withrec current (f (n + 1)) in f
 
-	withrec firstAggregated = collectSimplify simplifications
+	unlimited :: SimplificationF m ctx -> [Tree -> Maybe Tree]
+	unlimited current = let f = withrec current f in f
+
+	withrec :: SimplificationF m ctx -> [Tree -> Maybe Tree] -> [Tree -> Maybe Tree]
+	withrec current firstAggregated = collectSimplify simplifications
 		where
 		applyPattern :: SimplifyPattern -> (Tree -> Maybe Tree)
-		applyPattern pattern = matchAndReplace firstAggregated pattern
+		applyPattern (match, replace, conds) =
+			if anymatched -- If any conditional gets matched by the match part of pattern, reduction usually results in infinite recursion, so skip that pattern
+			then const Nothing
+			else matchAndReplace firstAggregated (match, replace, conds)
+			where
+			condTrees = foldl (\ acc (left, s, right) -> left : right : acc) [] $ map conditionalToTrees conds
+			anymatched = any isJust $ map (matchGetDict match) condTrees
 
 		collectSimplify :: [SimplificationF m ctx] -> [(Tree -> Maybe Tree)]
 		collectSimplify [] = []
@@ -200,3 +213,4 @@ makeSimplifiesFromMixed condRecLimit simplifications = maybe unlimited (limited 
 
 makeSimplifies :: [SimplifyPattern] -> [Tree -> Maybe Tree]
 makeSimplifies patterns = let f = map (matchAndReplace f) patterns in f
+	-- TODO: skip patterns that match own conditionals. Based on how it's done in `makeSimplifiesFromMixed'
