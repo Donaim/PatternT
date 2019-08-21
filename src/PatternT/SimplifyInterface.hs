@@ -24,13 +24,12 @@ applySimplifications patterns t0 = loop patterns t0
 			Nothing -> loop xs t
 
 -- Breaks on first success
-applyFirstSimplification :: [SimplifyPattern] -> Tree -> Maybe (Tree, SimplifyPattern)
-applyFirstSimplification patterns t0 = loop patterns t0
+applyFirstSimplification :: [Tree -> Maybe Tree] -> [SimplifyPattern] -> Tree -> Maybe (Tree, SimplifyPattern)
+applyFirstSimplification simplifies patterns t0 = loop patterns t0
 	where
-	simplify = makeSimplifies patterns
 	loop patterns t = case patterns of
 		[] -> Nothing
-		(x : xs) -> case applyTreeOne (matchAndReplace simplify x) t of
+		(x : xs) -> case applyTreeOne (matchAndReplace simplifies x) t of
 			Just newt -> Just (newt, x)
 			Nothing -> loop xs t
 
@@ -134,11 +133,12 @@ mixedApplyFirstSimplificationWithSimplify simplifications ctx t0 = loop simplifi
 -----------
 
 applySimplificationsUntil0Debug :: [SimplifyPattern] -> Tree -> [(Tree, SimplifyPattern)]
-applySimplificationsUntil0Debug patterns0 t0 = loop patterns0 t0
+applySimplificationsUntil0Debug patterns t0 = loop t0
 	where
-	loop patterns t = case applyFirstSimplification patterns t of
+	simplifies = makeSimplifies patterns
+	loop t = case applyFirstSimplification simplifies patterns t of
 		Nothing -> []
-		Just (newt, rule) -> (newt, rule) : loop patterns newt
+		Just (newt, rule) -> (newt, rule) : loop newt
 
 mixedApplySimplificationsUntil0Debug :: (Monad m) =>
 	Maybe Int ->
