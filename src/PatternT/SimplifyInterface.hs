@@ -129,15 +129,6 @@ mixedApplyFirstSimplificationWithSimplify simplify simplifications ctx t0 = loop
 						Just newt -> return $ Just (newt, Right name, ctx)
 						Nothing -> loop xs t
 
-mixedApplyFirstSimplification :: (Monad m) =>
-	[Tree -> Maybe Tree] ->
-	[SimplificationF m ctx] ->
-	ctx ->
-	Tree ->
-	m (Maybe (Tree, Either SimplifyPattern String, ctx))
-mixedApplyFirstSimplification simplifies simplifications ctx t0 =
-		mixedApplyFirstSimplificationWithSimplify simplifies simplifications ctx t0
-
 -----------
 -- LOOPS --
 -----------
@@ -159,7 +150,7 @@ mixedApplySimplificationsUntil0Debug condRecLimit simplifications ctx0 t0 = loop
 	where
 	simplifies = makeSimplifiesFromMixed condRecLimit simplifications
 	loop ctx t = do
-		r <- mixedApplyFirstSimplification simplifies simplifications ctx t
+		r <- mixedApplyFirstSimplificationWithSimplify simplifies simplifications ctx t
 		case r of
 			Nothing -> return []
 			Just (newt, rule, newCtx) -> do
