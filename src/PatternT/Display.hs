@@ -11,6 +11,12 @@ stringifyTree t = case t of
 	(Branch []) -> "()"
 	(Branch (x : xs)) -> "(" ++ stringifyTree x ++ concatMap ((' ' :) . stringifyTree) xs ++ ")"
 
+stringifyTree0 :: Tree -> String
+stringifyTree0 t = case t of
+	(Leaf s) -> s
+	(Branch []) -> "()"
+	(Branch (x : xs)) -> stringifyTree x ++ concatMap ((' ' :) . stringifyTree) xs
+
 stringifyMatchPart :: PatternMatchPart -> String
 stringifyMatchPart t = case t of
 	(Variable s) -> s
