@@ -55,7 +55,7 @@ data Either3 a b c
 
 data DelimiterOpts
 	= DelimiterIgnoreQuotes
-	| DelimiterPreserveQuotes
+	| DelimiterRespectQuotes
 	deriving (Eq, Show, Read)
 
 data TokenizeBracketsOpts
