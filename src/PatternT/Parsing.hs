@@ -10,15 +10,22 @@ import Control.Monad
 import PatternT.Types
 import PatternT.Util
 
-tokenize :: String -> Either ParseError [Expr]
-tokenize s = Right $ tokenizeEvery s
+tokenize :: TokenizeBracketsOpts -> TokenizeQuotesOpts -> String -> Either ParseError [Expr]
+tokenize bracketsOpts quotesOpts s =
+	if bracketsOpts == TokenizeReportBrackets && length opens /= length closes
+	then Left $ if length opens > length closes then MissingCloseBracket else MissingOpenBracket
+	else Right $ tokenizeEvery quotesOpts s
+	where
+	exprs = tokenizeEvery quotesOpts s
+	opens = filter (== '(') s
+	closes = filter (== ')') s
 
-tokenizeEvery :: String -> [Expr]
-tokenizeEvery s = case rest of
+tokenizeEvery :: TokenizeQuotesOpts -> String -> [Expr]
+tokenizeEvery quotesOpts s = case rest of
 	[] -> reverse exprs
 	xs -> if null exprs
-		then tokenizeEvery rest
-		else (Group (reverse exprs)) : tokenizeEvery rest
+		then tokenizeEvery quotesOpts rest
+		else (Group (reverse exprs)) : tokenizeEvery quotesOpts rest
 	where
 	(exprs, rest) = loop [] "" s
 
@@ -44,7 +51,7 @@ tokenizeEvery s = case rest of
 				else g : exp : buffer
 
 		(c : r) ->
-			if c == '\"' || c == '\''
+			if quotesOpts == TokenizeRespectQuotes && (c == '\"' || c == '\'')
 			then loop qbuffer "" qrest
 			else
 				if isSpace c
@@ -122,7 +129,7 @@ makeTreeWithSingletons expr = case expr of
 	Group g -> Branch $ map makeTreeWithSingletons g
 
 parseMatch :: String -> Either ParseMatchError SimplifyPattern
-parseMatch text = case tokenize text of
+parseMatch text = case tokenize TokenizeFixBrackets TokenizeRespectQuotes text of
 	Left e -> Left $ TokenizeError e
 	Right exprs -> withExprs exprs
 
@@ -194,7 +201,7 @@ partitionExpr break exprs =
 		where next = afterBreak break (pos + 1) xs
 
 parseMatchPart :: String -> Either ParseMatchError PatternMatchPart
-parseMatchPart text = case tokenize text of
+parseMatchPart text = case tokenize TokenizeFixBrackets TokenizeRespectQuotes text of
 		Left e -> Left $ TokenizeError e
 		Right ts -> exprToMatchPattern (Group ts)
 
@@ -233,7 +240,7 @@ exprToMatchPattern t = case t of
 
 
 parseReplacePart :: String -> Either ParseMatchError PatternReplacePart
-parseReplacePart text = case tokenize text of
+parseReplacePart text = case tokenize TokenizeFixBrackets TokenizeRespectQuotes text of
 		Left e -> Left $ TokenizeError e
 		Right ts -> Right $ exprToReplacePattern (Group ts)
 

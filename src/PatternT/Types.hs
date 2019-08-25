@@ -13,7 +13,9 @@ data Tree
 	| Branch [Tree]
 	deriving (Eq, Show, Read)
 
-data ParseError = ParseError
+data ParseError
+	= MissingOpenBracket
+	| MissingCloseBracket
 	deriving (Eq, Show, Read)
 
 data PatternMatchPart
@@ -54,6 +56,16 @@ data Either3 a b c
 data DelimiterOpts
 	= DelimiterIgnoreQuotes
 	| DelimiterPreserveQuotes
+	deriving (Eq, Show, Read)
+
+data TokenizeBracketsOpts
+	= TokenizeReportBrackets
+	| TokenizeFixBrackets
+	deriving (Eq, Show, Read)
+
+data TokenizeQuotesOpts
+	= TokenizeIgnoreQuotes
+	| TokenizeRespectQuotes
 	deriving (Eq, Show, Read)
 
 -- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the read-write context that is carried around. The monadic action also recieves aggregated simplify function
