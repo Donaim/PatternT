@@ -38,3 +38,8 @@ conditionalToTrees c = case c of
 	ImpliesCond a b -> (replacePartToTree a, Leaf "->", replacePartToTree b)
 	LTCond a b -> (replacePartToTree a, Leaf "<", replacePartToTree b)
 	LECond a b -> (replacePartToTree a, Leaf "<=", replacePartToTree b)
+
+treeToExpr :: Tree -> Expr
+treeToExpr t = case t of
+	Leaf s -> Atom s
+	Branch xs -> Group (map treeToExpr xs)
