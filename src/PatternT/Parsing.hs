@@ -10,71 +10,92 @@ import Control.Monad
 import PatternT.Types
 import PatternT.Util
 
-tokenize :: TokenizeBracketsOpts -> TokenizeQuotesOpts -> String -> Either ParseError [Expr]
-tokenize bracketsOpts quotesOpts s =
-	if bracketsOpts == TokenizeReportBrackets && length opens /= length closes
-	then Left $ if length opens > length closes then MissingCloseBracket else MissingOpenBracket
-	else Right $ tokenizeEvery quotesOpts s
+tokenize :: Bool -> String -> [Token]
+tokenize respectQuotes text = loop "" text
 	where
-	exprs = tokenizeEvery quotesOpts s
-	opens = filter (== '(') s
-	closes = filter (== ')') s
+	loop :: String -> String -> [Token]
+	loop buffer text = case text of
+		[] -> if null buffer then [] else [buffered]
+		(x : xs) -> case x of
+			'(' -> next TokenOpenBracket xs
+			')' -> next TokenCloseBracket xs
+			other ->
+				if respectQuotes && x == '\'' || x == '\"'
+				then next (TokenWord quoted (Just (x, qclosed))) qrest
+				else if isSpace x
+				then if null buffer then loop "" xs else buffered : loop "" xs
+				else loop (x : buffer) xs
+			where
+			(quoted, qrest, qclosed) = takeQuoted x xs
+		where
+		buffered = TokenWord (reverse buffer) Nothing
+		next tok rest =
+			if null buffer
+			then tok : loop "" rest
+			else buffered : tok : loop "" rest
 
-tokenizeEvery :: TokenizeQuotesOpts -> String -> [Expr]
-tokenizeEvery quotesOpts s = case rest of
-	[] -> reverse exprs
-	xs -> if null exprs
-		then tokenizeEvery quotesOpts rest
-		else (Group (reverse exprs)) : tokenizeEvery quotesOpts rest
+parse :: ParseOptions -> [Token] -> Either ParseError [Expr]
+parse opts tokens = maybe (Right $ parseEvery tokens) Left (listToMaybe $ parseCheck opts tokens)
+
+parseCheck :: ParseOptions -> [Token] -> [ParseError]
+parseCheck opts tokens = catMaybes $ map ($ tokens) $ map snd $ filter fst $
+	[ (not $ fixMissingBrackets opts, maybe Nothing (Just . maybe MissingCloseBracket (\ hist -> MissingOpenBracket hist)) . parseCheckBrackets)
+	, (reportMissingEndQuote opts,    maybe Nothing (\ (hist, blame) -> Just $ MissingEndQuote hist blame) . parseCheckQuotes)
+	, (reportEmptyBrackets opts,      maybe Nothing (Just . ParsedEmptyBrackets) . parseCheckEmptyBrackets)
+	]
+
+parseEvery :: [Token] -> [Expr]
+parseEvery tokens = start [] tokens
 	where
-	(exprs, rest) = loop [] "" s
+	start prev tokens =
+		if null rest
+		then cur
+		else start cur rest
+		where (cur, rest) = loop (if null prev then [] else [Group prev]) tokens
 
-	loop :: [Expr] -> String -> String -> ([Expr], String)
-	loop buffer cur text = case text of
-		"" ->
-			if null cur
-			then (buffer, "")
-			else (Atom cur : buffer, "")
-		(')' : r) ->
-			if null cur
-			then (buffer, r)
-			else (Atom cur : buffer, r)
+	loop buffer tokens = case tokens of
+		[] -> if null buffer then ([], []) else (reverse buffer, [])
+		(TokenOpenBracket : r) -> let (inBrackets, rest) = loop [] r in loop ((Group inBrackets) : buffer) rest
+		(TokenCloseBracket : r) -> (reverse buffer, r)
+		(TokenWord text qq : r) -> loop (Atom text : buffer) r
 
-		('(' : r) -> loop newBuffer "" rest
-			where
-			exp = Atom cur
-			(inBrackets, rest) = loop [] "" r
-			g = Group (reverse inBrackets)
-			newBuffer =
-				if null cur
-				then g : buffer
-				else g : exp : buffer
+parseCheckBrackets :: [Token] -> Maybe (Maybe [Token])
+parseCheckBrackets tokens = case folded of
+	Left hist -> Just (Just (reverse hist))
+	Right (hist, counter) -> if counter /= 0 then Just Nothing else Nothing
+	where
+	folded = foldl f (Right ([], 0)) tokens
+	f mcounter token = case mcounter of
+		Left e -> Left e
+		Right (hist, counter) -> case token of
+			TokenOpenBracket -> Right (newhist, counter + 1)
+			TokenCloseBracket -> if counter <= 0 then Left hist else Right (newhist, counter - 1)
+			other -> Right (newhist, counter)
+			where newhist = token : hist
 
-		(c : r) ->
-			if quotesOpts == TokenizeRespectQuotes && (c == '\"' || c == '\'')
-			then loop qbuffer "" qrest
-			else
-				if isSpace c
-				then loop spaceBuffer "" r
-				else loop buffer (cur ++ [c]) r
-			where
-			exp = Atom cur
-			spaceBuffer =
-				if null cur
-				then buffer
-				else exp : buffer
-			(quoted, qrest) = takeQuoted c r
-			q = Atom quoted
-			qbuffer =
-				if null cur
-				then q : buffer
-				else q : exp : buffer
+parseCheckQuotes :: [Token] -> Maybe ([Token], Token)
+parseCheckQuotes tokens = loop [] tokens
+	where
+	loop hist [] = Nothing
+	loop hist (x : xs) = case x of
+		TokenWord w quoteInfo -> case quoteInfo of
+			Just (c, False) -> Just (reverse hist, x)
+			other -> loop (x : hist) xs
+		other -> loop (x : hist) xs
 
-takeQuoted :: Char -> String -> (String, String)
+parseCheckEmptyBrackets :: [Token] -> Maybe ([Token])
+parseCheckEmptyBrackets tokens = loop [] tokens
+	where
+	loop hist tokens = case tokens of
+		[] -> Nothing
+		(TokenOpenBracket : TokenCloseBracket : xs) -> Just (reverse hist)
+		(x : xs) -> loop (x : hist) xs
+
+takeQuoted :: Char -> String -> (String, String, Bool)
 takeQuoted qchar str = loop False [] str
 	where
 	loop escaped buf str = case str of
-		"" -> (reverse buf, "")
+		"" -> (reverse buf, "", False)
 
 		('\\' : xs) -> loop (not escaped) newbuf xs
 			where newbuf = if escaped then '\\' : buf else buf
@@ -83,7 +104,7 @@ takeQuoted qchar str = loop False [] str
 			if x == qchar
 			then if escaped
 				then loop (not escaped) (qchar : buf) xs
-				else (reverse buf, xs)
+				else (reverse buf, xs, True)
 			else if escaped
 				then loop False (x : '\\' : buf) xs
 				else loop False (x : buf) xs
@@ -103,9 +124,10 @@ delimitSymbols opts delimiters text =
 			in reverse newBuf
 		loop buf cur (x : xs) =
 			if x == '\'' || x == '\"'
-			then let (q, next) = takeQuoted x xs
+			then let (q, next, qclosed) = takeQuoted x xs
 			in let delimited = if null cur then [] else delimitSymbols DelimiterIgnoreQuotes delimiters (reverse cur)
-				in let newBuf = if null cur then ((x : q ++ [x]) : buf) else ((x : q ++ [x]) : delimited : buf) -- ASSUMPTION: missing endquote is the same as with endquote
+				in let qcur = if qclosed then x : q ++ [x] else x : q
+				in let newBuf = if null cur then (qcur : buf) else (qcur : delimited : buf)
 				in loop newBuf "" next
 			else loop buf (x : cur) xs
 
@@ -129,35 +151,33 @@ makeTreeWithSingletons expr = case expr of
 	Group g -> Branch $ map makeTreeWithSingletons g
 
 parseMatch :: String -> Either ParseMatchError SimplifyPattern
-parseMatch text = case tokenize TokenizeFixBrackets TokenizeRespectQuotes text of
-	Left e -> Left $ TokenizeError e
-	Right exprs -> withExprs exprs
+parseMatch = parseMatch' . parseEvery . tokenize True
+
+parseMatch' :: [Expr] -> Either ParseMatchError SimplifyPattern
+parseMatch' exprs = do
+	replacePart <- maybe (Left $ SplitFailed betweenPipes) Right (maybeHead betweenPipes)
+	unless (null badConds) (Left $ head badConds)
+
+	match <- parseMatchPart' beforeArrow
+	replace <- parseReplacePart' replacePart
+
+	return (match, replace, goodConds)
 
 	where
-	withExprs exprs = do
-		replacePart <- maybe (Left $ SplitFailed betweenPipes) Right (maybeHead betweenPipes)
-		unless (null badConds) (Left $ head badConds)
+	(beforeArrow, _, afterArrow) = partitionExpr "->" exprs
 
-		match <- parseMatchPart' beforeArrow
-		replace <- parseReplacePart' replacePart
+	goodConds = snd partitionedBetween
+	badConds = fst partitionedBetween
 
-		return (match, replace, goodConds)
+	partitionedBetween = partitionEithers mappedBetween
+	mappedBetween = map parseCond' (tail betweenPipes)
+	betweenPipes = betweenPipesF afterArrow
 
-		where
-		(beforeArrow, _, afterArrow) = partitionExpr "->" exprs
-
-		goodConds = snd partitionedBetween
-		badConds = fst partitionedBetween
-
-		partitionedBetween = partitionEithers mappedBetween
-		mappedBetween = map parseCond' (tail betweenPipes)
-		betweenPipes = betweenPipesF afterArrow
-
-		betweenPipesF :: [Expr] -> [[Expr]]
-		betweenPipesF exprs = let (beforePipe, pipe, afterPipe) = partitionExpr "|" exprs
-			in case pipe of
-				Nothing -> [beforePipe]
-				(_) -> beforePipe : betweenPipesF afterPipe
+	betweenPipesF :: [Expr] -> [[Expr]]
+	betweenPipesF exprs = let (beforePipe, pipe, afterPipe) = partitionExpr "|" exprs
+		in case pipe of
+			Nothing -> [beforePipe]
+			(_) -> beforePipe : betweenPipesF afterPipe
 
 parseCond' :: [Expr] -> Either ParseMatchError Conditional
 parseCond' exprs = swapEither $ do
@@ -201,9 +221,7 @@ partitionExpr break exprs =
 		where next = afterBreak break (pos + 1) xs
 
 parseMatchPart :: String -> Either ParseMatchError PatternMatchPart
-parseMatchPart text = case tokenize TokenizeFixBrackets TokenizeRespectQuotes text of
-		Left e -> Left $ TokenizeError e
-		Right ts -> exprToMatchPattern (Group ts)
+parseMatchPart = parseMatchPart' . parseEvery . tokenize True
 
 parseMatchPart' :: [Expr] -> Either ParseMatchError PatternMatchPart
 parseMatchPart' exprs = exprToMatchPattern (Group exprs)
@@ -240,9 +258,7 @@ exprToMatchPattern t = case t of
 
 
 parseReplacePart :: String -> Either ParseMatchError PatternReplacePart
-parseReplacePart text = case tokenize TokenizeFixBrackets TokenizeRespectQuotes text of
-		Left e -> Left $ TokenizeError e
-		Right ts -> Right $ exprToReplacePattern (Group ts)
+parseReplacePart = parseReplacePart' . parseEvery . tokenize True
 
 parseReplacePart' :: [Expr] -> Either ParseMatchError PatternReplacePart
 parseReplacePart' exprs = Right $ exprToReplacePattern (Group exprs)

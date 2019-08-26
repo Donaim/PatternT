@@ -14,8 +14,10 @@ data Tree
 	deriving (Eq, Show, Read)
 
 data ParseError
-	= MissingOpenBracket
+	= MissingOpenBracket    [Token]          -- ^ [Token] are tokens up to (not including) a bad TokenCloseBracket
 	| MissingCloseBracket
+	| MissingEndQuote       [Token] Token    -- ^ [Token] are tokens up to (not including) a bad TokenWord (Token)
+	| ParsedEmptyBrackets   [Token]          -- ^ [Token] are tokens up to (not including) a bad ()
 	deriving (Eq, Show, Read)
 
 data PatternMatchPart
@@ -58,15 +60,17 @@ data DelimiterOpts
 	| DelimiterRespectQuotes
 	deriving (Eq, Show, Read)
 
-data TokenizeBracketsOpts
-	= TokenizeReportBrackets
-	| TokenizeFixBrackets
+data Token
+	= TokenWord String (Maybe (Char, Bool))         -- ^ Maybe (closing char, closedQ)
+	| TokenOpenBracket
+	| TokenCloseBracket
 	deriving (Eq, Show, Read)
 
-data TokenizeQuotesOpts
-	= TokenizeIgnoreQuotes
-	| TokenizeRespectQuotes
-	deriving (Eq, Show, Read)
+data ParseOptions = ParseOptions
+	{ fixMissingBrackets      :: Bool        -- ^ Treat "a b ) c )) d" as "(((a b) c)) d" and "(((( a b ) c ) d" as "(((( a b ) c ) d))". If false, returns Missing*Bracket
+	, reportMissingEndQuote   :: Bool
+	, reportEmptyBrackets     :: Bool
+	} deriving (Eq, Show, Read)
 
 -- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the read-write context that is carried around. The monadic action also recieves aggregated simplify function
 type MonadicSimplify m ctx = (String, [Tree -> Maybe Tree] -> ctx -> Tree -> m (Maybe (ctx, Tree)))
