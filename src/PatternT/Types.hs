@@ -40,11 +40,16 @@ data Conditional
 	| LECond PatternReplacePart PatternReplacePart
 	deriving (Eq, Show, Read)
 
-type SimplifyPattern = (PatternMatchPart, PatternReplacePart, [Conditional])
+data SimplifyPattern
+	= SimplifyPattern PatternMatchPart PatternReplacePart [Conditional]
+	| TrySimplifyPattern PatternMatchPart PatternReplacePart [Conditional]
+	deriving (Eq, Show, Read)
 
 data ParseMatchError
-	= Unknown String
-	| SplitFailed [[Expr]]
+	= ParseMatchErrorEmptyExprs
+	| ParseMatchErrorTryGotNoBody
+	| ParseMatchErrorNoReplacePart
+	| SplitFailed
 	| ExpectedClosingBracket String
 	| MatchEmptyTreeError
 	| TokenizeError ParseError
@@ -72,11 +77,17 @@ data ParseOptions = ParseOptions
 	, reportEmptyBrackets     :: Bool
 	} deriving (Eq, Show, Read)
 
+data RecF t x = RecF (t (x, RecF t x))
+type RecList x = RecF [] x
+
 -- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the read-write context that is carried around. The monadic action also recieves aggregated simplify function
 type MonadicSimplify m ctx = (String, [Tree -> Maybe Tree] -> ctx -> Tree -> m (Maybe (ctx, Tree)))
 
 -- | Pair of (function name, Function that accepts <aggregated simplify function> <tree to simplify> ) where aggregated simplify is a composition of all pure simplify functions that are used for applyTreeOne
 type PureSimplificationF = (String, [Tree -> Maybe Tree] -> Tree -> Maybe Tree)
+
+-- | Pattern that is going to be tried to be applied some number of times
+type TryPattern = SimplifyPattern
 
 -- | General simplification possibilities
 type SimplificationF m ctx = Either3 SimplifyPattern (MonadicSimplify m ctx) PureSimplificationF

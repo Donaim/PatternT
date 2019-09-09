@@ -154,30 +154,47 @@ parseMatch :: String -> Either ParseMatchError SimplifyPattern
 parseMatch = parseMatch' . parseEvery . tokenize True
 
 parseMatch' :: [Expr] -> Either ParseMatchError SimplifyPattern
-parseMatch' exprs = do
-	replacePart <- maybe (Left $ SplitFailed betweenPipes) Right (maybeHead betweenPipes)
-	unless (null badConds) (Left $ head badConds)
-
-	match <- parseMatchPart' beforeArrow
-	replace <- parseReplacePart' replacePart
-
-	return (match, replace, goodConds)
+parseMatch' [] = Left ParseMatchErrorEmptyExprs
+parseMatch' exprs =
+	let (beforeArrow, split, afterArrow) = partitionExpr "->" exprs
+	in if null split
+		then case exprs of
+			[Atom "try"] -> Left ParseMatchErrorTryGotNoBody
+			(Atom "try" : x : xs) -> do
+				let newxs = case x of
+					Atom {} -> x : xs
+					(Group atoms) -> atoms ++ xs
+				let (beforeArrow, _, afterArrow) = partitionExpr "->" newxs
+				(match, replace, conds) <- interparse beforeArrow afterArrow
+				return $ TrySimplifyPattern match replace conds
+			other -> Left SplitFailed
+		else do
+			(match, replace, conds) <- interparse beforeArrow afterArrow
+			return $ SimplifyPattern match replace conds
 
 	where
-	(beforeArrow, _, afterArrow) = partitionExpr "->" exprs
+	interparse beforeArrow afterArrow = do
+		replacePart <- maybe (Left ParseMatchErrorNoReplacePart) Right (maybeHead betweenPipes)
+		unless (null badConds) (Left $ head badConds)
 
-	goodConds = snd partitionedBetween
-	badConds = fst partitionedBetween
+		match <- parseMatchPart' beforeArrow
+		replace <- parseReplacePart' replacePart
 
-	partitionedBetween = partitionEithers mappedBetween
-	mappedBetween = map parseCond' (tail betweenPipes)
-	betweenPipes = betweenPipesF afterArrow
+		return (match, replace, goodConds)
 
-	betweenPipesF :: [Expr] -> [[Expr]]
-	betweenPipesF exprs = let (beforePipe, pipe, afterPipe) = partitionExpr "|" exprs
-		in case pipe of
-			Nothing -> [beforePipe]
-			(_) -> beforePipe : betweenPipesF afterPipe
+		where
+		goodConds = snd partitionedBetween
+		badConds = fst partitionedBetween
+
+		partitionedBetween = partitionEithers mappedBetween
+		mappedBetween = map parseCond' (tail betweenPipes)
+		betweenPipes = betweenPipesF afterArrow
+
+		betweenPipesF :: [Expr] -> [[Expr]]
+		betweenPipesF exprs = let (beforePipe, pipe, afterPipe) = partitionExpr "|" exprs
+			in case pipe of
+				Nothing -> [beforePipe]
+				(_) -> beforePipe : betweenPipesF afterPipe
 
 parseCond' :: [Expr] -> Either ParseMatchError Conditional
 parseCond' exprs = swapEither $ do
@@ -195,7 +212,7 @@ parseCond' exprs = swapEither $ do
 	where
 	tryTwoReplacements :: String -> (PatternReplacePart -> PatternReplacePart -> Conditional) -> Either Conditional ParseMatchError
 	tryTwoReplacements key constructor = case partitionExpr key exprs of
-		(left, Nothing, right) -> Right $ SplitFailed [exprs]
+		(left, Nothing, right) -> Right $ SplitFailed
 		(left, Just eq, right) -> swapEither $ do
 			rleft <- parseReplacePart' left
 			rright <- parseReplacePart' right

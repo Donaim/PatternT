@@ -43,3 +43,40 @@ treeToExpr :: Tree -> Expr
 treeToExpr t = case t of
 	Leaf s -> Atom s
 	Branch xs -> Group (map treeToExpr xs)
+
+-- | Takes a list of 'a's and returns a "List" of pairs of (('a', Other 'a's that recursively got here), rec)
+decreasingListsP :: [a] -> RecList (a, [a])
+decreasingListsP [] = RecF []
+decreasingListsP patterns = RecF continued
+	where
+	-- continued :: [((a, [a]), RecList (a, [a]))]
+	continued = map (\ (p, ps) -> ((p, ps), decreasingListsP ps)) collected
+
+	collected = map (\ i -> (patterns !! i, skiped i patterns)) [0 .. length patterns - 1]
+	skiped skipIndex list = loop list 0
+		where
+		loop list i = case list of
+			[] -> []
+			(x : xs) -> if i == skipIndex then xs else x : loop xs (i + 1)
+
+-- | Takes a list of 'a's and returns a "List" of pairs of ('a', rec)
+-- Ex: [A, B, C] -> [A [B [C], C [B]], B [A [C], C [A]], C [A [B], B [A]]]
+--     where "A [B]" is really a pair (A, [B])
+decreasingLists :: [a] -> RecList a
+decreasingLists [] = RecF []
+decreasingLists patterns = RecF continued
+	where
+	continued = map (\ i -> (patterns !! i, decreasingLists $ skiped i patterns)) [0 .. length patterns - 1]
+	skiped skipIndex list = loop list 0
+		where
+		loop list i = case list of
+			[] -> []
+			(x : xs) -> if i == skipIndex then xs else x : loop xs (i + 1)
+
+showRecList :: (Show a) => RecList a -> String
+showRecList (RecF []) = "[]"
+showRecList (RecF (x:xs)) = "[" ++ showp x ++ (concatMap ((", " ++) . showp) xs) ++ "]"
+	where
+	showp (x, xs) = case xs of
+		RecF [] -> show x
+		xs -> show x ++ " " ++ showRecList xs
