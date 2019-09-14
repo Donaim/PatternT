@@ -75,9 +75,9 @@ data ParseOptions = ParseOptions
 data RecF t x = RecF (t (x, RecF t x))
 type RecList x = RecF [] x
 
-class (Eq a, Ord a, Show a, Read a) => PatternElement a where
-	-- TODO: add useful fields. Maybe replace Eq, Ord classes
-
+class (Eq a, Ord a) => PatternElement a where
+	patternElemShow :: a -> String
+	patternElemRead :: String -> a
 
 instance (Eq a) => Eq (Tree a) where
 	a == b = case a of
@@ -102,7 +102,7 @@ instance (Ord a) => Ord (Tree a) where
 				(Branch ys) ->
 					compare xs ys -- NOTE: the size of branch is the secondary thing, the most important is first element of branch
 
--- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the read-write context that is carried around. The monadic action also recieves aggregated simplify function
+-- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the patternElemRead-write context that is carried around. The monadic action also recieves aggregated simplify function
 type MonadicSimplify a m ctx = (String, [Tree a -> Maybe (Tree a)] -> ctx -> Tree a -> m (Maybe (ctx, Tree a)))
 
 -- | Pair of (function name, Function that accepts <aggregated simplify function> <tree to simplify> ) where aggregated simplify is a composition of all pure simplify functions that are used for applyTreeOne

@@ -7,26 +7,26 @@ import PatternT.Util
 
 stringifyTree :: (PatternElement a) => Tree a -> String
 stringifyTree t = case t of
-	(Leaf s) -> show s
+	(Leaf s) -> patternElemShow s
 	(Branch []) -> "()"
 	(Branch (x : xs)) -> "(" ++ stringifyTree x ++ concatMap ((' ' :) . stringifyTree) xs ++ ")"
 
 stringifyTree0 :: (PatternElement a) => Tree a -> String
 stringifyTree0 t = case t of
-	(Leaf s) -> show s
+	(Leaf s) -> patternElemShow s
 	(Branch []) -> "()"
 	(Branch (x : xs)) -> stringifyTree x ++ concatMap ((' ' :) . stringifyTree) xs
 
 stringifyMatchPart :: (PatternElement a) => PatternMatchPart a -> String
 stringifyMatchPart t = case t of
-	(Variable s) -> show s
-	(NameMatch name) -> show name
-	(VaradicMatch name) -> show name
+	(Variable s) -> patternElemShow s
+	(NameMatch name) -> patternElemShow name
+	(VaradicMatch name) -> patternElemShow name
 	(MatchGroup x xs) -> "(" ++ stringifyMatchPart x ++ concatMap ((' ' :) . stringifyMatchPart) xs ++ ")"
 
 stringifyReplacePart :: (PatternElement a) => PatternReplacePart a -> String
 stringifyReplacePart t = case t of
-	(RVar s) -> show s
+	(RVar s) -> patternElemShow s
 	(RGroup []) -> "()"
 	(RGroup (x : xs)) -> "(" ++ stringifyReplacePart x ++ concatMap ((' ' :) . stringifyReplacePart) xs ++ ")"
 

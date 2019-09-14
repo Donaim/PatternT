@@ -229,7 +229,7 @@ withFunctionNameCheck defaul (name, func) tree = case tree of -- NOTE: in condSi
 				else defaul
 			(_) -> defaul
 	(_) -> defaul
-	where nameLeaf = read name
+	where nameLeaf = patternElemRead name
 
 -- | Filter condSimplifies that are pure, then apply condSimplifies to them to produce literally pure functions
 makeTrySimplifiesFromMixed :: (PatternElement a) => [(SimplificationF a m ctx, [Tree a -> Maybe (Tree a)])] -> ([Tree a -> Maybe (Tree a)], [Tree a -> Maybe (Tree a)])

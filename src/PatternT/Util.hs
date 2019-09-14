@@ -9,12 +9,8 @@ newtype StringyLeaf = MkStringyLeaf { unStringyLeaf :: String }
 	deriving (Eq, Ord)
 
 instance PatternElement StringyLeaf where
-
-instance Read StringyLeaf where
-	readsPrec _ input = [(MkStringyLeaf input, [])]
-
-instance Show StringyLeaf where
-	show = unStringyLeaf
+	patternElemRead = MkStringyLeaf
+	patternElemShow = unStringyLeaf
 
 maybeHead :: [a] -> Maybe a
 maybeHead [] = Nothing
@@ -43,17 +39,17 @@ replacePartToTree t = case t of
 	RVar x -> Leaf x
 	RGroup xs -> Branch (map replacePartToTree xs)
 
-conditionalToTrees :: (Read a) => Conditional a -> (Tree a, Tree a, Tree a)
+conditionalToTrees :: (PatternElement a) => Conditional a -> (Tree a, Tree a, Tree a)
 conditionalToTrees c = case c of
-	EqCond a b -> (replacePartToTree a, Leaf (read "=="), replacePartToTree b)
-	NeqCond a b -> (replacePartToTree a, Leaf (read "/="), replacePartToTree b)
-	ImpliesCond a b -> (replacePartToTree a, Leaf (read "->"), replacePartToTree b)
-	LTCond a b -> (replacePartToTree a, Leaf (read "<"), replacePartToTree b)
-	LECond a b -> (replacePartToTree a, Leaf (read "<="), replacePartToTree b)
+	EqCond a b -> (replacePartToTree a, Leaf (patternElemRead "=="), replacePartToTree b)
+	NeqCond a b -> (replacePartToTree a, Leaf (patternElemRead "/="), replacePartToTree b)
+	ImpliesCond a b -> (replacePartToTree a, Leaf (patternElemRead "->"), replacePartToTree b)
+	LTCond a b -> (replacePartToTree a, Leaf (patternElemRead "<"), replacePartToTree b)
+	LECond a b -> (replacePartToTree a, Leaf (patternElemRead "<="), replacePartToTree b)
 
-treeToExpr :: (Show a) => Tree a -> Expr
+treeToExpr :: (PatternElement a) => Tree a -> Expr
 treeToExpr t = case t of
-	Leaf s -> Atom (show s)
+	Leaf s -> Atom (patternElemShow s)
 	Branch xs -> Group (map treeToExpr xs)
 
 -- | Takes a list of 'a's and returns a "List" of pairs of (('a', Other 'a's that recursively got here), rec)

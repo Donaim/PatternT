@@ -138,15 +138,15 @@ delimitSymbols opts delimiters text =
 		Just del -> ' ' : (del ++ (' ' : drop (length del) joined))
 		where joined = c : acc
 
-makeTree :: (Read a) => Expr -> Tree a
+makeTree :: (PatternElement a) => Expr -> Tree a
 makeTree expr = case expr of
-	Atom sym -> Leaf (read sym)
+	Atom sym -> Leaf (patternElemRead sym)
 	(Group [x]) -> makeTree x
 	(Group g) -> Branch $ map makeTree g
 
-makeTreeWithSingletons :: (Read a) => Expr -> Tree a
+makeTreeWithSingletons :: (PatternElement a) => Expr -> Tree a
 makeTreeWithSingletons expr = case expr of
-	Atom sym -> Leaf (read sym)
+	Atom sym -> Leaf (patternElemRead sym)
 	Group g -> Branch $ map makeTreeWithSingletons g
 
 parseMatch :: (PatternElement a) => String -> Either ParseMatchError (SimplifyPattern a)
@@ -205,7 +205,7 @@ parseCond' exprs = swapEither $ do
 
 	swapEither $ do
 		rleft <- parseReplacePart' exprs
-		let rright = RVar (read "True")
+		let rright = RVar (patternElemRead "True")
 		return (ImpliesCond rleft rright)
 
 	where
@@ -248,14 +248,14 @@ exprToMatchPattern t = case t of
 		case s of
 			[x] -> Right $
 				if isDigit x || (not (isAlpha x))
-				then NameMatch (read s)
-				else Variable (read s)
+				then NameMatch (patternElemRead s)
+				else Variable (patternElemRead s)
 			('{' : xs) ->
 				if last xs == '}' -- ASSUMPTION: we know that xs is not empty because previus match would fire
-				then Right $ VaradicMatch (read s) -- NOTE: variable name is actually like "{x}", not just "x"
-				else Left $ ExpectedClosingBracket (read s)
+				then Right $ VaradicMatch (patternElemRead s) -- NOTE: variable name is actually like "{x}", not just "x"
+				else Left $ ExpectedClosingBracket (show s)
 			(_) ->
-				Right $ NameMatch (read s)
+				Right $ NameMatch (patternElemRead s)
 	(Group childs) ->
 		case childs of
 			[] -> Left MatchEmptyTreeError
@@ -282,7 +282,7 @@ parseReplacePart' exprs = Right $ exprToReplacePattern (Group exprs)
 exprToReplacePattern :: (PatternElement a) => Expr -> PatternReplacePart a
 exprToReplacePattern t = case t of
 	(Atom s) ->
-		(RVar (read s))
+		(RVar (patternElemRead s))
 
 	(Group []) ->
 		(RGroup [])
@@ -292,7 +292,7 @@ exprToReplacePattern t = case t of
 		unsingleton child = case child of
 			(RGroup [x]) -> case x of
 				(RVar s) ->
-					if head (show s) == '{' && last (show s) == '}' -- NOTE: replace pattern is also aware of varadic args, but only here
+					if head (patternElemShow s) == '{' && last (patternElemShow s) == '}' -- NOTE: replace pattern is also aware of varadic args, but only here
 					then child
 					else x
 				(_) -> x
