@@ -8,10 +8,9 @@ data Expr
 	| Group [Expr]
 	deriving (Eq, Show, Read)
 
-data Tree
-	= Leaf Symbol
-	| Branch [Tree]
-	deriving (Eq, Show, Read)
+data Tree a
+	= Leaf a
+	| Branch [Tree a]
 
 data ParseError
 	= MissingOpenBracket    [Token]          -- ^ [Token] are tokens up to (not including) a bad TokenCloseBracket
@@ -20,30 +19,26 @@ data ParseError
 	| ParsedEmptyBrackets   [Token]          -- ^ [Token] are tokens up to (not including) a bad ()
 	deriving (Eq, Show, Read)
 
-data PatternMatchPart
-	= Variable Symbol
-	| NameMatch Symbol
-	| VaradicMatch Symbol
-	| MatchGroup PatternMatchPart [PatternMatchPart]
-	deriving (Eq, Show, Read)
+data PatternMatchPart a
+	= Variable a
+	| NameMatch a
+	| VaradicMatch a
+	| MatchGroup (PatternMatchPart a) [(PatternMatchPart a)]
 
-data PatternReplacePart
-	= RVar Symbol
-	| RGroup [PatternReplacePart]
-	deriving (Eq, Show, Read)
+data PatternReplacePart a
+	= RVar a
+	| RGroup [(PatternReplacePart a)]
 
-data Conditional
-	= EqCond PatternReplacePart PatternReplacePart
-	| NeqCond PatternReplacePart PatternReplacePart
-	| ImpliesCond PatternReplacePart PatternReplacePart
-	| LTCond PatternReplacePart PatternReplacePart
-	| LECond PatternReplacePart PatternReplacePart
-	deriving (Eq, Show, Read)
+data Conditional a
+	= EqCond (PatternReplacePart a) (PatternReplacePart a)
+	| NeqCond (PatternReplacePart a) (PatternReplacePart a)
+	| ImpliesCond (PatternReplacePart a) (PatternReplacePart a)
+	| LTCond (PatternReplacePart a) (PatternReplacePart a)
+	| LECond (PatternReplacePart a) (PatternReplacePart a)
 
-data SimplifyPattern
-	= SimplifyPattern PatternMatchPart PatternReplacePart [Conditional]
-	| TrySimplifyPattern PatternMatchPart PatternReplacePart [Conditional]
-	deriving (Eq, Show, Read)
+data SimplifyPattern a
+	= SimplifyPattern (PatternMatchPart a) (PatternReplacePart a) [Conditional a]
+	| TrySimplifyPattern (PatternMatchPart a) (PatternReplacePart a) [Conditional a]
 
 data ParseMatchError
 	= ParseMatchErrorEmptyExprs
@@ -80,16 +75,40 @@ data ParseOptions = ParseOptions
 data RecF t x = RecF (t (x, RecF t x))
 type RecList x = RecF [] x
 
+class (Eq a, Ord a, Show a, Read a) => PatternElement a where
+	-- TODO: add useful fields. Maybe replace Eq, Ord classes
+
+
+instance (Eq a) => Eq (Tree a) where
+	a == b = case a of
+		Leaf x -> case b of
+			Leaf y -> x == y
+			Branch {} -> False
+		Branch xs -> case b of
+			Leaf {} -> False
+			Branch ys -> xs == ys
+
+instance (Ord a) => Ord (Tree a) where
+	compare a b =
+		case a of
+			(Leaf as) -> case b of
+				(Leaf bs) ->
+					compare as bs
+				(Branch {}) ->
+					LT -- ASSUMPTION: no singleton branches
+			(Branch xs) -> case b of
+				(Leaf {}) ->
+					GT -- ASSUMPTION: no singleton branches
+				(Branch ys) ->
+					compare xs ys -- NOTE: the size of branch is the secondary thing, the most important is first element of branch
+
 -- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the read-write context that is carried around. The monadic action also recieves aggregated simplify function
-type MonadicSimplify m ctx = (String, [Tree -> Maybe Tree] -> ctx -> Tree -> m (Maybe (ctx, Tree)))
+type MonadicSimplify a m ctx = (String, [Tree a -> Maybe (Tree a)] -> ctx -> Tree a -> m (Maybe (ctx, Tree a)))
 
 -- | Pair of (function name, Function that accepts <aggregated simplify function> <tree to simplify> ) where aggregated simplify is a composition of all pure simplify functions that are used for applyTreeOne
-type PureSimplificationF = (String, [Tree -> Maybe Tree] -> Tree -> Maybe Tree)
-
--- | Pattern that is going to be tried to be applied some number of times
-type TryPattern = SimplifyPattern
+type PureSimplificationF a = (String, [Tree a -> Maybe (Tree a)] -> Tree a -> Maybe (Tree a))
 
 -- | General simplification possibilities
-type SimplificationF m ctx = Either3 SimplifyPattern (MonadicSimplify m ctx) PureSimplificationF
+type SimplificationF a m ctx = Either3 (SimplifyPattern a) (MonadicSimplify a m ctx) (PureSimplificationF a)
 
-type SimplifyTraceElem = Either SimplifyPattern String
+type SimplifyTraceElem a = Either (SimplifyPattern a) String

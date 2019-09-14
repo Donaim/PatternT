@@ -6,9 +6,9 @@ import Data.Either
 import PatternT.Types
 import PatternT.Dict
 
-type BindingDict = Dict String [Tree]
+type BindingDict a = Dict a [Tree a]
 
-checkCond :: [Tree -> Maybe Tree] -> BindingDict -> Conditional -> Bool
+checkCond :: (PatternElement a) => [Tree a -> Maybe (Tree a)] -> BindingDict a -> Conditional a -> Bool
 checkCond simplifies dict cond = case cond of
 	(EqCond left right) ->
 		simplify (replaceWithDict dict left)
@@ -27,7 +27,7 @@ checkCond simplifies dict cond = case cond of
 			<= replaceWithDict dict right
 	where simplify t = maybe t id (listToMaybe $ catMaybes $ map ($ t) simplifies) -- apply first simplify function, not recursive NOTE: can match a recursive builtin
 
-matchAndReplace :: [Tree -> Maybe Tree] -> PatternMatchPart -> PatternReplacePart -> [Conditional] -> Tree -> Maybe Tree
+matchAndReplace :: (PatternElement a) => [Tree a -> Maybe (Tree a)] -> PatternMatchPart a -> PatternReplacePart a -> [Conditional a] -> Tree a -> Maybe (Tree a)
 matchAndReplace simplifies match replace conds t =
 	case matchGetDict match t of
 		Nothing -> Nothing
@@ -36,7 +36,7 @@ matchAndReplace simplifies match replace conds t =
 			then Just (replaceWithDict dict replace)
 			else Nothing
 
-replaceWithDict :: BindingDict -> PatternReplacePart -> Tree
+replaceWithDict :: (PatternElement a) => BindingDict a -> PatternReplacePart a -> Tree a
 replaceWithDict dict replace = case replace of
 	(RVar token) ->
 		case dictGet dict token of
@@ -60,10 +60,10 @@ replaceWithDict dict replace = case replace of
 						Nothing -> (Leaf token) : loop rs
 				(RGroup childs) -> replaceRgroup childs : loop rs
 
-matchGetDict :: PatternMatchPart -> Tree -> Maybe BindingDict
+matchGetDict :: (PatternElement a) => PatternMatchPart a -> Tree a -> Maybe (BindingDict a)
 matchGetDict match t = matchWithDict emptyDict match t
 
-matchWithDict :: BindingDict -> PatternMatchPart -> Tree -> Maybe BindingDict
+matchWithDict :: (PatternElement a) => BindingDict a -> PatternMatchPart a -> Tree a -> Maybe (BindingDict a)
 matchWithDict dict match t =
 	case match of
 		(Variable bindName) ->
@@ -88,7 +88,7 @@ matchWithDict dict match t =
 				(Leaf x) ->
 					Nothing
 
-matchVariable :: BindingDict -> Symbol -> Tree -> Maybe BindingDict
+matchVariable :: (PatternElement a) => BindingDict a -> a -> Tree a -> Maybe (BindingDict a)
 matchVariable dict bindName t =
 	case dictGet dict bindName of
 		Just [value] ->
@@ -98,7 +98,7 @@ matchVariable dict bindName t =
 		(_) ->
 			Just (dictAdd dict bindName [t])
 
-matchGroups :: BindingDict -> [PatternMatchPart] -> [Tree] -> Maybe BindingDict
+matchGroups :: (PatternElement a) => BindingDict a -> [PatternMatchPart a] -> [Tree a] -> Maybe (BindingDict a)
 matchGroups dict [] [] = Just dict
 matchGroups dict [] ts = Nothing -- Size should be equal
 matchGroups dict ps [] = Nothing -- Size should be equal
@@ -148,7 +148,7 @@ matchGroups dict (p : ps) (t : ts) = case p of
 					(Variable bindName) -> if foundQ then [] else Left bindName : loop False xs
 					(_) -> if foundQ then [] else loop False xs
 
-		varadicUntilExact :: [PatternMatchPart] -> [Tree] -> [Tree] -> ([Tree], [Tree])
+		varadicUntilExact :: (PatternElement a) => [PatternMatchPart a] -> [Tree a] -> [Tree a] -> ([Tree a], [Tree a])
 		varadicUntilExact matches buf trees =
 			case trees of
 				[] -> break
@@ -157,7 +157,7 @@ matchGroups dict (p : ps) (t : ts) = case p of
 					else varadicUntilExact matches (t : buf) ts
 			where break = (reverse buf, trees)
 
-		matchSome :: [Tree] -> [PatternMatchPart] -> Bool
+		matchSome :: (PatternElement a) => [Tree a] -> [PatternMatchPart a] -> Bool
 		matchSome trees patterns = case patterns of
 			[] -> True
 			(p : ps) -> case trees of
@@ -170,7 +170,7 @@ matchGroups dict (p : ps) (t : ts) = case p of
 -- APPLICATIONS --
 ------------------
 
-applyTreeOne :: (Tree -> Maybe Tree) -> Tree -> Maybe Tree
+applyTreeOne :: (PatternElement a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Maybe (Tree a)
 applyTreeOne func t = case t of
 	(Leaf s) -> func t
 	(Branch childs) ->
@@ -178,7 +178,7 @@ applyTreeOne func t = case t of
 				Just newme -> Just newme
 				Nothing -> func t
 		where
-		loop :: [Tree] -> [Tree] -> Maybe Tree
+		-- loop :: (PatternElement a) => [Tree a] -> [Tree a] -> Maybe (Tree a)
 		loop previus [] = Nothing
 		loop previus (c : cs) = case applyTreeOne func c of
 			Just newc -> Just $
@@ -188,10 +188,10 @@ applyTreeOne func t = case t of
 					(_) -> (Branch (previus ++ [newc] ++ cs))
 			Nothing -> loop (previus ++ [c]) cs
 
-monadicApplyTreeOne :: (Monad m) =>
-	(Tree -> m (Maybe (ctx, Tree))) ->
-	Tree ->
-	m (Maybe (ctx, Tree))
+monadicApplyTreeOne :: (PatternElement a) => (Monad m) =>
+	(Tree a -> m (Maybe (ctx, Tree a))) ->
+	Tree a ->
+	m (Maybe (ctx, Tree a))
 monadicApplyTreeOne func t = case t of
 	(Leaf s) -> func t
 	(Branch childs) -> do
@@ -200,7 +200,7 @@ monadicApplyTreeOne func t = case t of
 			Just x -> return $ Just x
 			Nothing -> func t
 		where
-		-- loop :: (Monad m) => [Tree] -> [Tree] -> m (Maybe (ctx, Tree)) -- TODO: make this type to work \=
+		-- loop :: (PatternElement a) => (Monad m) => [Tree a] -> [Tree a] -> m (Maybe (ctx, Tree a)) -- TODO: make this type to work \=
 		loop previus [] = return Nothing
 		loop previus (c : cs) = do
 			r <- monadicApplyTreeOne func c
@@ -211,21 +211,3 @@ monadicApplyTreeOne func t = case t of
 						(Branch [x]) -> (Branch (previus ++ [x] ++ cs)) -- NOTE: erasing singletons! NOTE: the top level tree can still be a singleton, but that's ok since we will match its children anyway
 						(_) -> (Branch (previus ++ [newc] ++ cs))
 				Nothing -> loop (previus ++ [c]) cs
-
---------------
--- ORDERING --
---------------
-
-instance Ord Tree where
-	compare a b =
-		case a of
-			(Leaf as) -> case b of
-				(Leaf bs) ->
-					compare as bs
-				(Branch {}) ->
-					LT -- ASSUMPTION: no singleton branches
-			(Branch xs) -> case b of
-				(Leaf {}) ->
-					GT -- ASSUMPTION: no singleton branches
-				(Branch ys) ->
-					compare xs ys -- NOTE: the size of branch is the secondary thing, the most important is first element of branch

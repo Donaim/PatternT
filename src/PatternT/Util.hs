@@ -4,6 +4,18 @@ module PatternT.Util where
 import Text.Read (readMaybe)
 import PatternT.Types
 
+-- | Simpliest working instance of PatternElement
+newtype StringyLeaf = MkStringyLeaf { unStringyLeaf :: String }
+	deriving (Eq, Ord)
+
+instance PatternElement StringyLeaf where
+
+instance Read StringyLeaf where
+	readsPrec _ input = [(MkStringyLeaf input, [])]
+
+instance Show StringyLeaf where
+	show = unStringyLeaf
+
 maybeHead :: [a] -> Maybe a
 maybeHead [] = Nothing
 maybeHead (x : xs) = Just x
@@ -26,22 +38,22 @@ partitionEither3 = foldr (either3 f0 f1 f2) ([], [], [])
 		f1 a ~(l0, l1, l2) = (l0, a : l1, l2)
 		f2 a ~(l0, l1, l2) = (l0, l1, a : l2)
 
-replacePartToTree :: PatternReplacePart -> Tree
+replacePartToTree :: PatternReplacePart a -> Tree a
 replacePartToTree t = case t of
 	RVar x -> Leaf x
 	RGroup xs -> Branch (map replacePartToTree xs)
 
-conditionalToTrees :: Conditional -> (Tree, Tree, Tree)
+conditionalToTrees :: (Read a) => Conditional a -> (Tree a, Tree a, Tree a)
 conditionalToTrees c = case c of
-	EqCond a b -> (replacePartToTree a, Leaf "==", replacePartToTree b)
-	NeqCond a b -> (replacePartToTree a, Leaf "/=", replacePartToTree b)
-	ImpliesCond a b -> (replacePartToTree a, Leaf "->", replacePartToTree b)
-	LTCond a b -> (replacePartToTree a, Leaf "<", replacePartToTree b)
-	LECond a b -> (replacePartToTree a, Leaf "<=", replacePartToTree b)
+	EqCond a b -> (replacePartToTree a, Leaf (read "=="), replacePartToTree b)
+	NeqCond a b -> (replacePartToTree a, Leaf (read "/="), replacePartToTree b)
+	ImpliesCond a b -> (replacePartToTree a, Leaf (read "->"), replacePartToTree b)
+	LTCond a b -> (replacePartToTree a, Leaf (read "<"), replacePartToTree b)
+	LECond a b -> (replacePartToTree a, Leaf (read "<="), replacePartToTree b)
 
-treeToExpr :: Tree -> Expr
+treeToExpr :: (Show a) => Tree a -> Expr
 treeToExpr t = case t of
-	Leaf s -> Atom s
+	Leaf s -> Atom (show s)
 	Branch xs -> Group (map treeToExpr xs)
 
 -- | Takes a list of 'a's and returns a "List" of pairs of (('a', Other 'a's that recursively got here), rec)

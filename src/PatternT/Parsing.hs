@@ -1,6 +1,5 @@
 module PatternT.Parsing where
 
-import Text.Read (readMaybe)
 import Data.List
 import Data.Maybe
 import Data.Either
@@ -139,21 +138,21 @@ delimitSymbols opts delimiters text =
 		Just del -> ' ' : (del ++ (' ' : drop (length del) joined))
 		where joined = c : acc
 
-makeTree :: Expr -> Tree
+makeTree :: (Read a) => Expr -> Tree a
 makeTree expr = case expr of
-	Atom sym -> Leaf sym
+	Atom sym -> Leaf (read sym)
 	(Group [x]) -> makeTree x
 	(Group g) -> Branch $ map makeTree g
 
-makeTreeWithSingletons :: Expr -> Tree
+makeTreeWithSingletons :: (Read a) => Expr -> Tree a
 makeTreeWithSingletons expr = case expr of
-	Atom sym -> Leaf sym
+	Atom sym -> Leaf (read sym)
 	Group g -> Branch $ map makeTreeWithSingletons g
 
-parseMatch :: String -> Either ParseMatchError SimplifyPattern
+parseMatch :: (PatternElement a) => String -> Either ParseMatchError (SimplifyPattern a)
 parseMatch = parseMatch' . parseEvery . tokenize True
 
-parseMatch' :: [Expr] -> Either ParseMatchError SimplifyPattern
+parseMatch' :: (PatternElement a) => [Expr] -> Either ParseMatchError (SimplifyPattern a)
 parseMatch' [] = Left ParseMatchErrorEmptyExprs
 parseMatch' exprs =
 	let (beforeArrow, split, afterArrow) = partitionExpr "->" exprs
@@ -196,7 +195,7 @@ parseMatch' exprs =
 				Nothing -> [beforePipe]
 				(_) -> beforePipe : betweenPipesF afterPipe
 
-parseCond' :: [Expr] -> Either ParseMatchError Conditional
+parseCond' :: (PatternElement a) => [Expr] -> Either ParseMatchError (Conditional a)
 parseCond' exprs = swapEither $ do
 	_ <- tryTwoReplacements "==" EqCond
 	_ <- tryTwoReplacements "!=" NeqCond
@@ -206,11 +205,11 @@ parseCond' exprs = swapEither $ do
 
 	swapEither $ do
 		rleft <- parseReplacePart' exprs
-		let rright = RVar "True"
+		let rright = RVar (read "True")
 		return (ImpliesCond rleft rright)
 
 	where
-	tryTwoReplacements :: String -> (PatternReplacePart -> PatternReplacePart -> Conditional) -> Either Conditional ParseMatchError
+	tryTwoReplacements :: (PatternElement a) => String -> (PatternReplacePart a -> PatternReplacePart a -> Conditional a) -> Either (Conditional a) ParseMatchError
 	tryTwoReplacements key constructor = case partitionExpr key exprs of
 		(left, Nothing, right) -> Right $ SplitFailed
 		(left, Just eq, right) -> swapEither $ do
@@ -237,26 +236,26 @@ partitionExpr break exprs =
 		(Group leafs) -> next
 		where next = afterBreak break (pos + 1) xs
 
-parseMatchPart :: String -> Either ParseMatchError PatternMatchPart
+parseMatchPart :: (PatternElement a) => String -> Either ParseMatchError (PatternMatchPart a)
 parseMatchPart = parseMatchPart' . parseEvery . tokenize True
 
-parseMatchPart' :: [Expr] -> Either ParseMatchError PatternMatchPart
+parseMatchPart' :: (PatternElement a) => [Expr] -> Either ParseMatchError (PatternMatchPart a)
 parseMatchPart' exprs = exprToMatchPattern (Group exprs)
 
-exprToMatchPattern :: Expr -> Either ParseMatchError PatternMatchPart
+exprToMatchPattern :: (PatternElement a) => Expr -> Either ParseMatchError (PatternMatchPart a)
 exprToMatchPattern t = case t of
 	(Atom s) ->
 		case s of
 			[x] -> Right $
 				if isDigit x || (not (isAlpha x))
-				then NameMatch s
-				else Variable s
+				then NameMatch (read s)
+				else Variable (read s)
 			('{' : xs) ->
 				if last xs == '}' -- ASSUMPTION: we know that xs is not empty because previus match would fire
-				then Right $ VaradicMatch s -- NOTE: variable name is actually like "{x}", not just "x"
-				else Left $ ExpectedClosingBracket s
+				then Right $ VaradicMatch (read s) -- NOTE: variable name is actually like "{x}", not just "x"
+				else Left $ ExpectedClosingBracket (read s)
 			(_) ->
-				Right $ NameMatch s
+				Right $ NameMatch (read s)
 	(Group childs) ->
 		case childs of
 			[] -> Left MatchEmptyTreeError
@@ -274,16 +273,16 @@ exprToMatchPattern t = case t of
 					(_) -> child
 
 
-parseReplacePart :: String -> Either ParseMatchError PatternReplacePart
+parseReplacePart :: (PatternElement a) => String -> Either ParseMatchError (PatternReplacePart a)
 parseReplacePart = parseReplacePart' . parseEvery . tokenize True
 
-parseReplacePart' :: [Expr] -> Either ParseMatchError PatternReplacePart
+parseReplacePart' :: (PatternElement a) => [Expr] -> Either ParseMatchError (PatternReplacePart a)
 parseReplacePart' exprs = Right $ exprToReplacePattern (Group exprs)
 
-exprToReplacePattern :: Expr -> PatternReplacePart
+exprToReplacePattern :: (PatternElement a) => Expr -> PatternReplacePart a
 exprToReplacePattern t = case t of
 	(Atom s) ->
-		(RVar s)
+		(RVar (read s))
 
 	(Group []) ->
 		(RGroup [])
@@ -293,7 +292,7 @@ exprToReplacePattern t = case t of
 		unsingleton child = case child of
 			(RGroup [x]) -> case x of
 				(RVar s) ->
-					if head s == '{' && last s == '}' -- NOTE: replace pattern is also aware of varadic args, but only here
+					if head (show s) == '{' && last (show s) == '}' -- NOTE: replace pattern is also aware of varadic args, but only here
 					then child
 					else x
 				(_) -> x
