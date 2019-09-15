@@ -6,7 +6,7 @@ import PatternT.Types
 
 -- | Simpliest working instance of PatternElement
 newtype StringyLeaf = MkStringyLeaf { unStringyLeaf :: String }
-	deriving (Eq, Ord)
+	deriving (Eq, Show, Read, Ord)
 
 instance PatternElement StringyLeaf where
 	patternElemRead = MkStringyLeaf
