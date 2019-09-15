@@ -102,6 +102,11 @@ instance (Ord a) => Ord (Tree a) where
 				(Branch ys) ->
 					compare xs ys -- NOTE: the size of branch is the secondary thing, the most important is first element of branch
 
+instance (Show a) => Show (Tree a) where
+	show me = case me of
+		Leaf l -> show l
+		Branch xs -> "(" ++ concatMap ((' ' :) . show) xs ++ " )"
+
 -- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the patternElemRead-write context that is carried around. The monadic action also recieves aggregated simplify function
 type MonadicSimplify a m ctx = (String, [Tree a -> Maybe (Tree a)] -> ctx -> Tree a -> m (Maybe (ctx, Tree a)))
 
