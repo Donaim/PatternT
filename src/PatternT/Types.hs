@@ -107,11 +107,11 @@ instance (Show a) => Show (Tree a) where
 		Leaf l -> show l
 		Branch xs -> "(" ++ concatMap ((' ' :) . show) xs ++ " )"
 
--- | Pairs of (function name, monadic action on tree that matches). The `ctx' is the patternElemRead-write context that is carried around. The monadic action also recieves aggregated simplify function
-type MonadicSimplify a m ctx = (String, [Tree a -> Maybe (Tree a)] -> ctx -> Tree a -> m (Maybe (ctx, Tree a)))
+-- | Pairs of (function identifier, monadic action on tree that matches). The `ctx' is the patternElemRead-write context that is carried around. The monadic action also recieves aggregated simplify function
+type MonadicSimplify a m ctx = (a, [Tree a -> Maybe (Tree a)] -> ctx -> Tree a -> m (Maybe (ctx, Tree a)))
 
--- | Pair of (function name, Function that accepts <aggregated simplify function> <tree to simplify> ) where aggregated simplify is a composition of all pure simplify functions that are used for applyTreeOne
-type PureSimplificationF a = (String, [Tree a -> Maybe (Tree a)] -> Tree a -> Maybe (Tree a))
+-- | Pair of (function identifier, Function that accepts <aggregated simplify function> <tree to simplify> ) where aggregated simplify is a composition of all pure simplify functions that are used for applyTreeOne
+type PureSimplificationF a = (a, [Tree a -> Maybe (Tree a)] -> Tree a -> Maybe (Tree a))
 
 -- | General simplification possibilities
 type SimplificationF a m ctx = Either3 (SimplifyPattern a) (MonadicSimplify a m ctx) (PureSimplificationF a)

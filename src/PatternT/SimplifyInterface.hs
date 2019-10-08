@@ -75,7 +75,7 @@ applySimplificationsUntil0Last patterns t0 = loop t0
 -----------------------------
 
 monadicMatchAndReplace :: (Monad m, PatternElement a) =>
-	String ->
+	a ->
 	(Tree a -> m (Maybe (ctx, Tree a))) ->
 	Tree a ->
 	m (Maybe (ctx, Tree a))
@@ -95,7 +95,7 @@ monadicApplyFirstSimplification condSimplifies simplifications ctx t0 = loop sim
 		((name, func) : xs) -> do
 			r <- monadicApplyTreeOne (monadicMatchAndReplace name (func condSimplifies ctx)) t
 			case r of
-				Just (newCtx, newt) -> return $ Just (newt, name, newCtx)
+				Just (newCtx, newt) -> return $ Just (newt, patternElemShow name, newCtx)
 				Nothing -> loop xs t
 
 -----------
@@ -120,15 +120,15 @@ mixedApplyFirstSimplificationWithSimplify simplifications ctx t0 = loop simplifi
 					Nothing -> loop xs t
 
 			Middle3 (name, func) -> do
-				r <- monadicApplyTreeOne (monadicMatchAndReplace name (func condSimplifies ctx)) t
+				r <- monadicApplyTreeOne (monadicMatchAndReplace undefined (func condSimplifies ctx)) t
 				case r of
-					Just (newCtx, newt) -> return $ Just (newt, Right name, newCtx)
+					Just (newCtx, newt) -> return $ Just (newt, Right $ patternElemShow name, newCtx)
 					Nothing -> loop xs t
 
 			Right3 (name, func) ->
 				let r = applyTreeOne (matchAndReplacePureF condSimplifies (name, func)) t
 				in case r of
-					Just newt -> return $ Just (newt, Right name, ctx)
+					Just newt -> return $ Just (newt, Right $ patternElemShow name, ctx)
 					Nothing -> loop xs t
 
 -----------
@@ -215,8 +215,8 @@ applySimplifyPattern (patternSimplifies, trySimplifies) condSimplifies pattern t
 			-- differentTrees :: (PatternElement a) => [Tree a]
 			-- trees3         :: (PatternElement a) => [(Tree a, Tree a, Bool)]
 
-withFunctionNameCheck :: (PatternElement a) => b -> (String, Tree a -> b) -> (Tree a -> b)
-withFunctionNameCheck defaul (name, func) tree = case tree of -- NOTE: in condSimplifies function we always check the name!
+withFunctionNameCheck :: (PatternElement a) => b -> (a, Tree a -> b) -> (Tree a -> b)
+withFunctionNameCheck defaul (nameLeaf, func) tree = case tree of -- NOTE: in condSimplifies function we always check the name!
 	(Leaf s) ->
 		if s == nameLeaf
 		then func tree
@@ -229,7 +229,6 @@ withFunctionNameCheck defaul (name, func) tree = case tree of -- NOTE: in condSi
 				else defaul
 			(_) -> defaul
 	(_) -> defaul
-	where nameLeaf = patternElemRead name
 
 -- | Filter condSimplifies that are pure, then apply condSimplifies to them to produce literally pure functions
 makeTrySimplifiesFromMixed :: (PatternElement a) => [(SimplificationF a m ctx, [Tree a -> Maybe (Tree a)])] -> ([Tree a -> Maybe (Tree a)], [Tree a -> Maybe (Tree a)])
