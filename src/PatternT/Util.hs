@@ -1,7 +1,6 @@
 
 module PatternT.Util where
 
-import Text.Read (readMaybe)
 import PatternT.Types
 
 -- | Simpliest working instance of PatternElement
