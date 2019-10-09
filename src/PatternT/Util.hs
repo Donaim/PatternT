@@ -48,7 +48,7 @@ conditionalToTrees c = case c of
 
 treeToExpr :: (PatternElement a) => Tree a -> Expr
 treeToExpr t = case t of
-	Leaf s -> Atom (patternElemShow s)
+	Leaf s -> Atom (patternElemShow s) False
 	Branch xs -> Group (map treeToExpr xs)
 
 -- | Takes a list of 'a's and returns a "List" of pairs of (('a', Other 'a's that recursively got here), rec)

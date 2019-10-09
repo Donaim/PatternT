@@ -56,7 +56,7 @@ parseEvery tokens = start [] tokens
 		[] -> if null buffer then ([], []) else (reverse buffer, [])
 		(TokenOpenBracket : r) -> let (inBrackets, rest) = loop [] r in loop ((Group inBrackets) : buffer) rest
 		(TokenCloseBracket : r) -> (reverse buffer, r)
-		(TokenWord text qq : r) -> loop (Atom text : buffer) r
+		(TokenWord text qq : r) -> loop (Atom text (isJust qq) : buffer) r
 
 parseCheckBrackets :: [Token] -> Maybe (Maybe [Token])
 parseCheckBrackets tokens = case folded of
@@ -140,13 +140,13 @@ delimitSymbols opts delimiters text =
 
 makeTree :: (PatternElement a) => Expr -> Tree a
 makeTree expr = case expr of
-	Atom sym -> Leaf (patternElemRead sym)
+	Atom sym qq -> Leaf (patternElemRead sym)
 	(Group [x]) -> makeTree x
 	(Group g) -> Branch $ map makeTree g
 
 makeTreeWithSingletons :: (PatternElement a) => Expr -> Tree a
 makeTreeWithSingletons expr = case expr of
-	Atom sym -> Leaf (patternElemRead sym)
+	Atom sym qq -> Leaf (patternElemRead sym)
 	Group g -> Branch $ map makeTreeWithSingletons g
 
 parseMatch :: (PatternElement a) => String -> Either ParseMatchError (SimplifyPattern a)
@@ -158,8 +158,8 @@ parseMatch' exprs =
 	let (beforeArrow, split, afterArrow) = partitionExpr "->" exprs
 	in if null split
 		then case exprs of
-			[Atom "try"] -> Left ParseMatchErrorTryGotNoBody
-			(Atom "try" : x : xs) -> do
+			[Atom "try" qq] -> Left ParseMatchErrorTryGotNoBody
+			(Atom "try" qq : x : xs) -> do
 				let newxs = case x of
 					Atom {} -> x : xs
 					(Group atoms) -> atoms ++ xs
@@ -229,7 +229,7 @@ partitionExpr break exprs =
 	afterBreak :: String -> Int -> [Expr] -> ([Expr], Maybe Expr, Int)
 	afterBreak break pos [] = ([], Nothing, -1)
 	afterBreak break pos (x : xs) = case x of
-		(Atom s) ->
+		(Atom s qq) ->
 			if s == break
 			then (xs, Just x, pos)
 			else next
@@ -244,14 +244,16 @@ parseMatchPart' exprs = exprToMatchPattern (Group exprs)
 
 exprToMatchPattern :: (PatternElement a) => Expr -> Either ParseMatchError (PatternMatchPart a)
 exprToMatchPattern t = case t of
-	(Atom s) ->
+	(Atom s qq) ->
 		case s of
 			[x] -> Right $
-				if isDigit x || (not (isAlpha x))
+				if qq || isDigit x || (not (isAlpha x))
 				then NameMatch (patternElemRead s)
 				else Variable (patternElemRead s)
 			('{' : xs) ->
-				if last xs == '}' -- ASSUMPTION: we know that xs is not empty because previus match would fire
+				if qq
+				then Right $ NameMatch (patternElemRead s)
+				else if last xs == '}' -- ASSUMPTION: we know that xs is not empty because previus match would fire
 				then Right $ VaradicMatch (patternElemRead s) -- NOTE: variable name is actually like "{x}", not just "x"
 				else Left $ ExpectedClosingBracket (show s)
 			(_) ->
@@ -281,7 +283,7 @@ parseReplacePart' exprs = Right $ exprToReplacePattern (Group exprs)
 
 exprToReplacePattern :: (PatternElement a) => Expr -> PatternReplacePart a
 exprToReplacePattern t = case t of
-	(Atom s) ->
+	(Atom s qq) ->
 		(RVar (patternElemRead s))
 
 	(Group []) ->
