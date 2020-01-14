@@ -140,13 +140,13 @@ delimitSymbols opts delimiters text =
 
 makeTree :: (PatternElement a) => Expr -> Tree a
 makeTree expr = case expr of
-	Atom sym qq -> Leaf (patternElemRead sym)
+	Atom sym qq -> Leaf (patternElemRead sym qq)
 	(Group [x]) -> makeTree x
 	(Group g) -> Branch $ map makeTree g
 
 makeTreeWithSingletons :: (PatternElement a) => Expr -> Tree a
 makeTreeWithSingletons expr = case expr of
-	Atom sym qq -> Leaf (patternElemRead sym)
+	Atom sym qq -> Leaf (patternElemRead sym qq)
 	Group g -> Branch $ map makeTreeWithSingletons g
 
 parseMatch :: (PatternElement a) => String -> Either ParseMatchError (SimplifyPattern a)
@@ -205,7 +205,7 @@ parseCond' exprs = swapEither $ do
 
 	swapEither $ do
 		rleft <- parseReplacePart' exprs
-		let rright = RVar (patternElemRead "True")
+		let rright = RVar (patternElemRead "True" Nothing)
 		return (ImpliesCond rleft rright)
 
 	where
@@ -248,16 +248,16 @@ exprToMatchPattern t = case t of
 		case s of
 			[x] -> Right $
 				if (isJust qq) || isDigit x || (not (isAlpha x))
-				then NameMatch (patternElemRead s)
-				else Variable (patternElemRead s)
+				then NameMatch (patternElemRead s qq)
+				else Variable (patternElemRead s qq)
 			('{' : xs) ->
 				if (isJust qq)
-				then Right $ NameMatch (patternElemRead s)
+				then Right $ NameMatch (patternElemRead s qq)
 				else if last xs == '}' -- ASSUMPTION: we know that xs is not empty because previus match would fire
-				then Right $ VaradicMatch (patternElemRead s) -- NOTE: variable name is actually like "{x}", not just "x"
+				then Right $ VaradicMatch (patternElemRead s qq) -- NOTE: variable name is actually like "{x}", not just "x"
 				else Left $ ExpectedClosingBracket (show s)
 			(_) ->
-				Right $ NameMatch (patternElemRead s)
+				Right $ NameMatch (patternElemRead s qq)
 	(Group childs) ->
 		case childs of
 			[] -> Left MatchEmptyTreeError
@@ -284,7 +284,7 @@ parseReplacePart' exprs = Right $ exprToReplacePattern (Group exprs)
 exprToReplacePattern :: (PatternElement a) => Expr -> PatternReplacePart a
 exprToReplacePattern t = case t of
 	(Atom s qq) ->
-		(RVar (patternElemRead s))
+		(RVar (patternElemRead s qq))
 
 	(Group []) ->
 		(RGroup [])

@@ -3,8 +3,10 @@ module PatternT.Types where
 
 type Symbol = String
 
+type QuoteInfo = Maybe (Char, Bool)       -- ^ Maybe (closing char, closedQ)
+
 data Expr
-	= Atom Symbol (Maybe (Char, Bool))       -- ^ Maybe (closing char, closedQ)
+	= Atom Symbol QuoteInfo
 	| Group [Expr]
 	deriving (Eq, Show, Read)
 
@@ -61,7 +63,7 @@ data DelimiterOpts
 	deriving (Eq, Show, Read)
 
 data Token
-	= TokenWord String (Maybe (Char, Bool))         -- ^ Maybe (closing char, closedQ)
+	= TokenWord String QuoteInfo
 	| TokenOpenBracket
 	| TokenCloseBracket
 	deriving (Eq, Show, Read)
@@ -77,7 +79,7 @@ type RecList x = RecF [] x
 
 class (Eq a, Ord a) => PatternElement a where
 	patternElemShow :: a -> String
-	patternElemRead :: String -> a
+	patternElemRead :: String -> QuoteInfo -> a
 
 instance (Eq a) => Eq (Tree a) where
 	a == b = case a of

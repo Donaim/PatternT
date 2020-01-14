@@ -7,8 +7,13 @@ import PatternT.Types
 newtype StringyLeaf = MkStringyLeaf { unStringyLeaf :: String }
 	deriving (Eq, Show, Read, Ord)
 
+appendQuotes :: QuoteInfo -> String -> String
+appendQuotes q s = case q of
+	Nothing -> s
+	Just (qq, closedQ) -> qq : s ++ [qq]
+
 instance PatternElement StringyLeaf where
-	patternElemRead = MkStringyLeaf
+	patternElemRead s q = MkStringyLeaf (appendQuotes q s)
 	patternElemShow = unStringyLeaf
 
 maybeHead :: [a] -> Maybe a
@@ -40,11 +45,11 @@ replacePartToTree t = case t of
 
 conditionalToTrees :: (PatternElement a) => Conditional a -> (Tree a, Tree a, Tree a)
 conditionalToTrees c = case c of
-	EqCond a b -> (replacePartToTree a, Leaf (patternElemRead "=="), replacePartToTree b)
-	NeqCond a b -> (replacePartToTree a, Leaf (patternElemRead "/="), replacePartToTree b)
-	ImpliesCond a b -> (replacePartToTree a, Leaf (patternElemRead "->"), replacePartToTree b)
-	LTCond a b -> (replacePartToTree a, Leaf (patternElemRead "<"), replacePartToTree b)
-	LECond a b -> (replacePartToTree a, Leaf (patternElemRead "<="), replacePartToTree b)
+	EqCond a b -> (replacePartToTree a, Leaf (patternElemRead "==" Nothing), replacePartToTree b)
+	NeqCond a b -> (replacePartToTree a, Leaf (patternElemRead "/=" Nothing), replacePartToTree b)
+	ImpliesCond a b -> (replacePartToTree a, Leaf (patternElemRead "->" Nothing), replacePartToTree b)
+	LTCond a b -> (replacePartToTree a, Leaf (patternElemRead "<" Nothing), replacePartToTree b)
+	LECond a b -> (replacePartToTree a, Leaf (patternElemRead "<=" Nothing), replacePartToTree b)
 
 treeToExpr :: (PatternElement a) => Tree a -> Expr
 treeToExpr t = case t of
