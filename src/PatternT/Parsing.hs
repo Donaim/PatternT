@@ -158,20 +158,28 @@ parseMatch' exprs =
 	let (beforeArrow, split, afterArrow) = partitionExpr "->" exprs
 	in if null split
 		then case exprs of
-			[Atom "try" qq] -> Left ParseMatchErrorTryGotNoBody
-			(Atom "try" qq : x : xs) -> do
-				let newxs = case x of
-					Atom {} -> x : xs
-					(Group atoms) -> atoms ++ xs
-				let (beforeArrow, _, afterArrow) = partitionExpr "->" newxs
-				(match, replace, conds) <- interparse beforeArrow afterArrow
-				return $ TrySimplifyPattern match replace conds
+			(Atom "try" qq : rest) ->
+				parseCustomMatch
+					TrySimplifyPattern
+					rest
+					ParseMatchErrorTryGotNoBody
 			other -> Left SplitFailed
 		else do
 			(match, replace, conds) <- interparse beforeArrow afterArrow
 			return $ SimplifyPattern match replace conds
 
 	where
+	parseCustomMatch constructor rest err =
+		case rest of
+			[] -> Left err
+			(x : xs) -> do
+				let newxs = case x of
+					Atom {} -> x : xs
+					(Group atoms) -> atoms ++ xs
+				let (beforeArrow, _, afterArrow) = partitionExpr "->" newxs
+				(match, replace, conds) <- interparse beforeArrow afterArrow
+				return $ constructor match replace conds
+
 	interparse beforeArrow afterArrow = do
 		replacePart <- maybe (Left ParseMatchErrorNoReplacePart) Right (maybeHead betweenPipes)
 		unless (null badConds) (Left $ head badConds)
