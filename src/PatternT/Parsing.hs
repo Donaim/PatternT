@@ -56,7 +56,7 @@ parseEvery tokens = start [] tokens
 		[] -> if null buffer then ([], []) else (reverse buffer, [])
 		(TokenOpenBracket : r) -> let (inBrackets, rest) = loop [] r in loop ((Group inBrackets) : buffer) rest
 		(TokenCloseBracket : r) -> (reverse buffer, r)
-		(TokenWord text qq : r) -> loop (Atom text (isJust qq) : buffer) r
+		(TokenWord text qq : r) -> loop (Atom text qq : buffer) r
 
 parseCheckBrackets :: [Token] -> Maybe (Maybe [Token])
 parseCheckBrackets tokens = case folded of
@@ -247,11 +247,11 @@ exprToMatchPattern t = case t of
 	(Atom s qq) ->
 		case s of
 			[x] -> Right $
-				if qq || isDigit x || (not (isAlpha x))
+				if (isJust qq) || isDigit x || (not (isAlpha x))
 				then NameMatch (patternElemRead s)
 				else Variable (patternElemRead s)
 			('{' : xs) ->
-				if qq
+				if (isJust qq)
 				then Right $ NameMatch (patternElemRead s)
 				else if last xs == '}' -- ASSUMPTION: we know that xs is not empty because previus match would fire
 				then Right $ VaradicMatch (patternElemRead s) -- NOTE: variable name is actually like "{x}", not just "x"

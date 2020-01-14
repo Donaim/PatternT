@@ -4,7 +4,7 @@ module PatternT.Types where
 type Symbol = String
 
 data Expr
-	= Atom Symbol Bool -- Bool stands for "quoted?"
+	= Atom Symbol (Maybe (Char, Bool))       -- ^ Maybe (closing char, closedQ)
 	| Group [Expr]
 	deriving (Eq, Show, Read)
 
