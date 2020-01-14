@@ -41,10 +41,12 @@ data Conditional a
 data SimplifyPattern a
 	= SimplifyPattern (PatternMatchPart a) (PatternReplacePart a) [Conditional a]
 	| TrySimplifyPattern (PatternMatchPart a) (PatternReplacePart a) [Conditional a]
+	| EagerSimplifyPattern (PatternMatchPart a) (PatternReplacePart a) [Conditional a]
 
 data ParseMatchError
 	= ParseMatchErrorEmptyExprs
 	| ParseMatchErrorTryGotNoBody
+	| ParseMatchErrorEagerGotNoBody
 	| ParseMatchErrorNoReplacePart
 	| SplitFailed
 	| ExpectedClosingBracket String

@@ -163,6 +163,11 @@ parseMatch' exprs =
 					TrySimplifyPattern
 					rest
 					ParseMatchErrorTryGotNoBody
+			(Atom "eager" qq : rest) ->
+				parseCustomMatch
+					EagerSimplifyPattern
+					rest
+					ParseMatchErrorEagerGotNoBody
 			other -> Left SplitFailed
 		else do
 			(match, replace, conds) <- interparse beforeArrow afterArrow

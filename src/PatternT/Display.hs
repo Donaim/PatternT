@@ -41,6 +41,7 @@ stringifySimplifyPattern :: (PatternElement a) => SimplifyPattern a -> String
 stringifySimplifyPattern pattern = case pattern of
 	SimplifyPattern match replace conds -> full (basepart match replace) conds
 	TrySimplifyPattern match replace conds -> full ("try (" ++ basepart match replace ++ ")") conds
+	EagerSimplifyPattern mtc replace conds -> full ("eager (" ++ basepart mtc replace ++ ")") conds
 	where
 	full leftpart conds = concat $ intersperse " | " $ leftpart : (map stringifyCond conds)
 	basepart match replace = stringifyMatchPart match ++ " -> " ++ stringifyReplacePart replace

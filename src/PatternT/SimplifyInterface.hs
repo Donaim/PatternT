@@ -197,6 +197,7 @@ matchAndReplacePureF condSimplifies (name, func) = withFunctionNameCheck Nothing
 applySimplifyPattern :: (PatternElement a) => ([Tree a -> Maybe (Tree a)], [Tree a -> Maybe (Tree a)]) -> [Tree a -> Maybe (Tree a)] -> SimplifyPattern a -> Tree a -> Maybe (Tree a)
 applySimplifyPattern (patternSimplifies, trySimplifies) condSimplifies pattern t = case pattern of
 	SimplifyPattern    match replace conds -> applyTreeOne (matchAndReplace condSimplifies match replace conds) t
+	EagerSimplifyPattern mtc replace conds -> applyTreeAll (matchAndReplace condSimplifies mtc   replace conds) t
 	TrySimplifyPattern match replace conds -> patrec       (matchAndReplace condSimplifies match replace conds) decr t
 		where
 		decr = decreasingLists trySimplifies
@@ -248,6 +249,7 @@ makeTrySimplify :: (PatternElement a) => [Tree a -> Maybe (Tree a)] -> SimplifyP
 makeTrySimplify condSimplifies pattern = case pattern of
 	SimplifyPattern    match replace conds -> Left  $ matchAndReplace condSimplifies match replace conds
 	TrySimplifyPattern match replace conds -> Right $ matchAndReplace condSimplifies match replace conds
+	EagerSimplifyPattern mtc replace conds -> Left  $ matchAndReplace condSimplifies mtc   replace conds
 
 -- | Using mixed rules, take pure ones and make condSimplifies functions for each rule from them to use in Conditionals
 -- This method has 2 features:
@@ -277,6 +279,7 @@ makeCondSimplifiesFromMixed condRecLimit simplifications = maybe (mapwithcur unl
 			(match, replace, conds) = case pattern of
 				SimplifyPattern match replace conds -> (match, replace, conds)
 				TrySimplifyPattern match replace conds -> (match, replace, conds)
+				EagerSimplifyPattern mtc replace conds -> (mtc,   replace, conds)
 			condTrees = foldl (\ acc (left, s, right) -> left : right : acc) [] $ map conditionalToTrees conds
 			anymatched = any isJust $ map (matchGetDict match) condTrees
 
@@ -294,5 +297,6 @@ makeCondSimplifies patterns = let f = map (simpleApply f) patterns in f
 	simpleApply condSimplifies pattern = case pattern of
 		SimplifyPattern match replace conds -> matchAndReplace condSimplifies match replace conds
 		TrySimplifyPattern match replace conds -> matchAndReplace condSimplifies match replace conds
+		EagerSimplifyPattern mtc replace conds -> matchAndReplace condSimplifies mtc   replace conds
 
 	-- TODO: skip patterns that match own conditionals. Based on how it's done in `makeCondSimplifiesFromMixed'
