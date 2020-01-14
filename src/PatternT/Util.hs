@@ -16,6 +16,10 @@ instance PatternElement StringyLeaf where
 	patternElemRead s q = MkStringyLeaf (appendQuotes q s)
 	patternElemShow = unStringyLeaf
 
+-- | Read unquoted, used frequently when creating new Leafs
+patternElemReadUq :: (PatternElement a) => String -> a
+patternElemReadUq s = patternElemRead s Nothing
+
 maybeHead :: [a] -> Maybe a
 maybeHead [] = Nothing
 maybeHead (x : xs) = Just x
@@ -45,11 +49,11 @@ replacePartToTree t = case t of
 
 conditionalToTrees :: (PatternElement a) => Conditional a -> (Tree a, Tree a, Tree a)
 conditionalToTrees c = case c of
-	EqCond a b -> (replacePartToTree a, Leaf (patternElemRead "==" Nothing), replacePartToTree b)
-	NeqCond a b -> (replacePartToTree a, Leaf (patternElemRead "/=" Nothing), replacePartToTree b)
-	ImpliesCond a b -> (replacePartToTree a, Leaf (patternElemRead "->" Nothing), replacePartToTree b)
-	LTCond a b -> (replacePartToTree a, Leaf (patternElemRead "<" Nothing), replacePartToTree b)
-	LECond a b -> (replacePartToTree a, Leaf (patternElemRead "<=" Nothing), replacePartToTree b)
+	EqCond a b -> (replacePartToTree a, Leaf (patternElemReadUq "=="), replacePartToTree b)
+	NeqCond a b -> (replacePartToTree a, Leaf (patternElemReadUq "/="), replacePartToTree b)
+	ImpliesCond a b -> (replacePartToTree a, Leaf (patternElemReadUq "->"), replacePartToTree b)
+	LTCond a b -> (replacePartToTree a, Leaf (patternElemReadUq "<"), replacePartToTree b)
+	LECond a b -> (replacePartToTree a, Leaf (patternElemReadUq "<="), replacePartToTree b)
 
 treeToExpr :: (PatternElement a) => Tree a -> Expr
 treeToExpr t = case t of

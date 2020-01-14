@@ -205,7 +205,7 @@ parseCond' exprs = swapEither $ do
 
 	swapEither $ do
 		rleft <- parseReplacePart' exprs
-		let rright = RVar (patternElemRead "True" Nothing)
+		let rright = RVar (patternElemReadUq "True")
 		return (ImpliesCond rleft rright)
 
 	where
