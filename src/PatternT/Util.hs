@@ -10,7 +10,16 @@ newtype StringyLeaf = MkStringyLeaf { unStringyLeaf :: String }
 appendQuotes :: QuoteInfo -> String -> String
 appendQuotes q s = case q of
 	Nothing -> s
-	Just (qq, closedQ) -> qq : s ++ (if closedQ then [qq] else [])
+	Just (qq, closedQ) ->
+		qq : (escapeChar qq s)  ++ (if closedQ then [qq] else [])
+
+escapeChar :: Char -> String -> String
+escapeChar q s = case s of
+	[] -> []
+	(x : xs) ->
+		if q == x
+		then '\\' : x : escapeChar q xs
+		else x : escapeChar q xs
 
 instance PatternElement StringyLeaf where
 	patternElemRead s q = MkStringyLeaf (appendQuotes q s)
