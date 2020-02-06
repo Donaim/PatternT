@@ -219,7 +219,7 @@ applyTreeAll func t = case t of
 	(Leaf s) -> func t
 	(Branch oldchilds) -> case func t of
 		Just newme -> Just $ case newme of
-			Leaf leafme -> Leaf leafme
+			Leaf leafme -> newme
 			Branch newchilds -> case getChilds newchilds of
 				Just bestchilds -> Branch bestchilds
 				Nothing -> newme
@@ -238,28 +238,39 @@ applyTreeAll func t = case t of
 				(_) -> loop True (newc : previus) cs
 			Nothing -> loop changed (c : previus) cs
 
--- -- TODO
--- monadicApplyTreeAll :: (PatternElement a) => (Monad m) =>
--- 	(Tree a -> m (Maybe (ctx, Tree a))) ->
--- 	Tree a ->
--- 	m (Maybe (ctx, Tree a))
--- monadicApplyTreeAll func t = case t of
--- 	(Leaf s) -> func t
--- 	(Branch childs) -> do
--- 		looped <- loop [] childs
--- 		case looped of
--- 			Just x -> return $ Just x
--- 			Nothing -> func t
--- 		where
--- 		-- loop :: (PatternElement a) => (Monad m) => [Tree a] -> [Tree a] -> m (Maybe (ctx, Tree a)) -- TODO: make this type to work \=
--- 		loop previus [] = return Nothing
--- 		loop previus (c : cs) = do
--- 			r <- monadicApplyTreeOne func c
--- 			case r of
--- 				Just (ctx, newc) -> return $ Just $ (,) ctx $
--- 					case newc of
--- 						(Branch []) -> (Branch (previus ++ cs)) -- NOTE: erasing empty leafs!
--- 						(Branch [x]) -> (Branch (previus ++ [x] ++ cs)) -- NOTE: erasing singletons! NOTE: the top level tree can still be a singleton, but that's ok since we will match its children anyway
--- 						(_) -> (Branch (previus ++ [newc] ++ cs))
--- 				Nothing -> loop (previus ++ [c]) cs
+-- FIXME: propagate context
+monadicApplyTreeAll :: (PatternElement a) => (Monad m) =>
+	(Tree a -> m (Maybe (ctx, Tree a))) ->
+	Tree a ->
+	m (Maybe (ctx, Tree a))
+monadicApplyTreeAll func t = case t of
+	(Leaf s) -> func t
+	(Branch oldchilds) -> do
+		newme <- func t
+		case newme of
+			Just (ctx, newme) -> case newme of
+				Leaf leafme -> return $ Just (ctx, newme)
+				Branch newchilds -> do
+					bestchilds <- getChilds newchilds
+					return $ Just $ case bestchilds of
+						Just (ctx, bestchilds) -> (ctx, Branch bestchilds)
+						Nothing -> (ctx, newme)
+			Nothing -> do
+				bestchilds <- getChilds oldchilds
+				return $ case bestchilds of
+					Just (ctx, bestchilds) -> Just (ctx, Branch bestchilds)
+					Nothing -> Nothing
+
+		where
+		getChilds = loop Nothing []
+
+		loop mctx previus [] = return $ mctx >>= (\ ctx -> Just (ctx, reverse previus))
+		loop mctx previus (c : cs) = do
+			r <- monadicApplyTreeAll func c
+			case r of
+				Just (newctx, newc) -> case newc of
+					(Branch []) -> loop (Just newctx) previus cs -- NOTE: erasing empty leafs!
+					(Branch [x]) -> loop (Just newctx) (x : previus) cs -- NOTE: erasing singletons! NOTE: the top level tree can still be a singleton, but that's ok since we will match its children anyway
+					(_) -> loop (Just newctx) (newc : previus) cs
+				Nothing -> loop mctx (c : previus) cs
 
