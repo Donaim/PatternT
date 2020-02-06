@@ -170,9 +170,28 @@ matchGroups dict (p : ps) (t : ts) = case p of
 -- APPLICATIONS --
 ------------------
 
--- | Bottom-up apply first
+-- | Top-down apply first
 applyTreeOne :: (PatternElement a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Maybe (Tree a)
 applyTreeOne func t = case t of
+	(Leaf s) -> func t
+	(Branch oldchilds) -> let new = func t in case new of
+		Just newme -> new
+		Nothing -> let new = loop [] oldchilds in case new of
+			Just bestchild -> new
+			Nothing -> Nothing
+		where
+		loop previus [] = Nothing
+		loop previus (c : cs) = case applyTreeOne func c of
+			Just newc -> Just $
+				case newc of
+					(Branch []) -> (Branch (previus ++ cs)) -- NOTE: erasing empty leafs!
+					(Branch [x]) -> (Branch (previus ++ (x : cs))) -- NOTE: erasing singletons! NOTE: the top level tree can still be a singleton, but that's ok since we will match its children anyway
+					(_) -> (Branch (previus ++ (newc : cs)))
+			Nothing -> loop (previus ++ [c]) cs
+
+-- | Bottom-up apply first
+applyTreeOneBU :: (PatternElement a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Maybe (Tree a)
+applyTreeOneBU func t = case t of
 	(Leaf s) -> func t
 	(Branch childs) ->
 			case loop [] childs of
@@ -188,30 +207,6 @@ applyTreeOne func t = case t of
 					(Branch [x]) -> (Branch (previus ++ [x] ++ cs)) -- NOTE: erasing singletons! NOTE: the top level tree can still be a singleton, but that's ok since we will match its children anyway
 					(_) -> (Branch (previus ++ [newc] ++ cs))
 			Nothing -> loop (previus ++ [c]) cs
-
-monadicApplyTreeOne :: (PatternElement a) => (Monad m) =>
-	(Tree a -> m (Maybe (ctx, Tree a))) ->
-	Tree a ->
-	m (Maybe (ctx, Tree a))
-monadicApplyTreeOne func t = case t of
-	(Leaf s) -> func t
-	(Branch childs) -> do
-		looped <- loop [] childs
-		case looped of
-			Just x -> return $ Just x
-			Nothing -> func t
-		where
-		-- loop :: (PatternElement a) => (Monad m) => [Tree a] -> [Tree a] -> m (Maybe (ctx, Tree a)) -- TODO: make this type to work \=
-		loop previus [] = return Nothing
-		loop previus (c : cs) = do
-			r <- monadicApplyTreeOne func c
-			case r of
-				Just (ctx, newc) -> return $ Just $ (,) ctx $
-					case newc of
-						(Branch []) -> (Branch (previus ++ cs)) -- NOTE: erasing empty leafs!
-						(Branch [x]) -> (Branch (previus ++ [x] ++ cs)) -- NOTE: erasing singletons! NOTE: the top level tree can still be a singleton, but that's ok since we will match its children anyway
-						(_) -> (Branch (previus ++ [newc] ++ cs))
-				Nothing -> loop (previus ++ [c]) cs
 
 -- | Top-down apply all
 applyTreeAll :: (PatternElement a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Maybe (Tree a)
@@ -237,3 +232,27 @@ applyTreeAll func t = case t of
 				(Branch [x]) -> loop True (x : previus) cs -- NOTE: erasing singletons! NOTE: the top level tree can still be a singleton, but that's ok since we will match its children anyway
 				(_) -> loop True (newc : previus) cs
 			Nothing -> loop changed (c : previus) cs
+
+monadicApplyTreeOne :: (PatternElement a) => (Monad m) =>
+	(Tree a -> m (Maybe (ctx, Tree a))) ->
+	Tree a ->
+	m (Maybe (ctx, Tree a))
+monadicApplyTreeOne func t = case t of
+	(Leaf s) -> func t
+	(Branch childs) -> do
+		looped <- loop [] childs
+		case looped of
+			Just x -> return $ Just x
+			Nothing -> func t
+		where
+		-- loop :: (PatternElement a) => (Monad m) => [Tree a] -> [Tree a] -> m (Maybe (ctx, Tree a)) -- TODO: make this type to work \=
+		loop previus [] = return Nothing
+		loop previus (c : cs) = do
+			r <- monadicApplyTreeOne func c
+			case r of
+				Just (ctx, newc) -> return $ Just $ (,) ctx $
+					case newc of
+						(Branch []) -> (Branch (previus ++ cs)) -- NOTE: erasing empty leafs!
+						(Branch [x]) -> (Branch (previus ++ [x] ++ cs)) -- NOTE: erasing singletons! NOTE: the top level tree can still be a singleton, but that's ok since we will match its children anyway
+						(_) -> (Branch (previus ++ [newc] ++ cs))
+				Nothing -> loop (previus ++ [c]) cs
