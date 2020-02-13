@@ -3,32 +3,6 @@ module PatternT.Util where
 
 import PatternT.Types
 
--- | Simpliest working instance of PatternElement
-newtype StringyLeaf = MkStringyLeaf { unStringyLeaf :: String }
-	deriving (Eq, Show, Read, Ord)
-
-appendQuotes :: QuoteInfo -> String -> String
-appendQuotes q s = case q of
-	Nothing -> s
-	Just (qq, closedQ) ->
-		qq : (escapeChar qq s)  ++ (if closedQ then [qq] else [])
-
-escapeChar :: Char -> String -> String
-escapeChar q s = case s of
-	[] -> []
-	(x : xs) ->
-		if q == x
-		then '\\' : x : escapeChar q xs
-		else x : escapeChar q xs
-
-instance PatternElement StringyLeaf where
-	patternElemRead s q = MkStringyLeaf (appendQuotes q s)
-	patternElemShow = unStringyLeaf
-
--- | Read unquoted, used frequently when creating new Leafs
-patternElemReadUq :: (PatternElement a) => String -> a
-patternElemReadUq s = patternElemRead s Nothing
-
 maybeHead :: [a] -> Maybe a
 maybeHead [] = Nothing
 maybeHead (x : xs) = Just x
@@ -56,18 +30,13 @@ replacePartToTree t = case t of
 	RVar x -> Leaf x
 	RGroup xs -> Branch (map replacePartToTree xs)
 
-conditionalToTrees :: (PatternElement a) => Conditional a -> (Tree a, Tree a, Tree a)
+conditionalToTrees :: Conditional a -> (Tree a, Tree a)
 conditionalToTrees c = case c of
-	EqCond a b -> (replacePartToTree a, Leaf (patternElemReadUq "=="), replacePartToTree b)
-	NeqCond a b -> (replacePartToTree a, Leaf (patternElemReadUq "/="), replacePartToTree b)
-	ImpliesCond a b -> (replacePartToTree a, Leaf (patternElemReadUq "->"), replacePartToTree b)
-	LTCond a b -> (replacePartToTree a, Leaf (patternElemReadUq "<"), replacePartToTree b)
-	LECond a b -> (replacePartToTree a, Leaf (patternElemReadUq "<="), replacePartToTree b)
-
-treeToExpr :: (PatternElement a) => Tree a -> Expr
-treeToExpr t = case t of
-	Leaf s -> Atom (patternElemShow s) Nothing
-	Branch xs -> Group (map treeToExpr xs)
+	EqCond a b -> (replacePartToTree a, replacePartToTree b)
+	NeqCond a b -> (replacePartToTree a, replacePartToTree b)
+	ImpliesCond a b -> (replacePartToTree a, replacePartToTree b)
+	LTCond a b -> (replacePartToTree a, replacePartToTree b)
+	LECond a b -> (replacePartToTree a, replacePartToTree b)
 
 -- | Takes a list of 'a's and returns a "List" of pairs of (('a', Other 'a's that recursively got here), rec)
 decreasingListsP :: [a] -> RecList (a, [a])

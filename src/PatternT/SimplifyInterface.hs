@@ -13,7 +13,7 @@ import PatternT.Util
 -- PURE --
 ----------
 
-applySimplifications :: (PatternElement a) => [SimplifyPattern a] -> Tree a -> [Tree a]
+applySimplifications :: (Eq a, Ord a, Show a) => [SimplifyPattern a] -> Tree a -> [Tree a]
 applySimplifications patterns t0 = loop patterns t0
 	where
 	condSimplifies = makeCondSimplifies patterns
@@ -25,7 +25,7 @@ applySimplifications patterns t0 = loop patterns t0
 			Nothing -> loop xs t
 
 -- Breaks on first success
-applyFirstSimplification :: (PatternElement a) => [Tree a -> Maybe (Tree a)] -> [SimplifyPattern a] -> Tree a -> Maybe (Tree a, SimplifyPattern a)
+applyFirstSimplification :: (Eq a, Ord a, Show a) => [Tree a -> Maybe (Tree a)] -> [SimplifyPattern a] -> Tree a -> Maybe (Tree a, SimplifyPattern a)
 applyFirstSimplification condSimplifies patterns t0 = loop patterns t0
 	where
 	pureSimplifies = makeTrySimplifies condSimplifies patterns
@@ -36,7 +36,7 @@ applyFirstSimplification condSimplifies patterns t0 = loop patterns t0
 			Nothing -> loop xs t
 
 -- Breaks on first success, does not return SimplifyPattern a that matched
-applyFirstSimplificationL :: (PatternElement a) => [SimplifyPattern a] -> Tree a -> Maybe (Tree a)
+applyFirstSimplificationL :: (Eq a, Ord a, Show a) => [SimplifyPattern a] -> Tree a -> Maybe (Tree a)
 applyFirstSimplificationL patterns t0 = loop patterns t0
 	where
 	condSimplifies = makeCondSimplifies patterns
@@ -47,7 +47,7 @@ applyFirstSimplificationL patterns t0 = loop patterns t0
 			Just newt -> Just newt
 			Nothing -> loop xs t
 
-applyFirstSimplificationF :: (PatternElement a) => [Tree a -> Maybe (Tree a)] -> Tree a -> Maybe (Tree a)
+applyFirstSimplificationF :: (Eq a, Ord a, Show a) => [Tree a -> Maybe (Tree a)] -> Tree a -> Maybe (Tree a)
 applyFirstSimplificationF funcs t0 = loop funcs t0
 	where
 	loop funcs t = case funcs of
@@ -56,14 +56,14 @@ applyFirstSimplificationF funcs t0 = loop funcs t0
 			Just newt -> Just newt
 			Nothing -> loop fs t
 
-applySimplificationsUntil0LastF :: (PatternElement a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Tree a
+applySimplificationsUntil0LastF :: (Eq a, Ord a, Show a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Tree a
 applySimplificationsUntil0LastF func t0 = loop t0
 	where
 	loop t = case func t of
 		Nothing -> t
 		Just newt -> loop newt
 
-applySimplificationsUntil0Last :: (PatternElement a) => [SimplifyPattern a] -> Tree a -> Tree a
+applySimplificationsUntil0Last :: (Eq a, Ord a, Show a) => [SimplifyPattern a] -> Tree a -> Tree a
 applySimplificationsUntil0Last patterns t0 = loop t0
 	where
 	loop t = case applyFirstSimplificationL patterns t of
@@ -74,7 +74,7 @@ applySimplificationsUntil0Last patterns t0 = loop t0
 -- MONADIC SIMPLIFICATIONS --
 -----------------------------
 
-monadicMatchAndReplace :: (Monad m, PatternElement a) =>
+monadicMatchAndReplace :: (Monad m, Eq a, Ord a, Show a) =>
 	a ->
 	(Tree a -> m (Maybe (ctx, Tree a))) ->
 	Tree a ->
@@ -82,7 +82,7 @@ monadicMatchAndReplace :: (Monad m, PatternElement a) =>
 monadicMatchAndReplace name func =
 	withFunctionNameCheck (return Nothing) (name, func)
 
-monadicApplyFirstSimplification :: (Monad m, PatternElement a) =>
+monadicApplyFirstSimplification :: (Monad m, Eq a, Ord a, Show a) =>
 	[Tree a -> Maybe (Tree a)] ->
 	[MonadicSimplify a m ctx] ->
 	ctx ->
@@ -95,21 +95,21 @@ monadicApplyFirstSimplification condSimplifies simplifications ctx t0 = loop sim
 		((name, func) : xs) -> do
 			r <- monadicApplyTreeOne (monadicMatchAndReplace name (func condSimplifies ctx)) t
 			case r of
-				Just (newCtx, newt) -> return $ Just (newt, patternElemShow name, newCtx)
+				Just (newCtx, newt) -> return $ Just (newt, show name, newCtx)
 				Nothing -> loop xs t
 
 -----------
 -- MIXED --
 -----------
 
-mixedApplyFirstSimplificationWithSimplify :: (Monad m, PatternElement a) =>
+mixedApplyFirstSimplificationWithSimplify :: (Monad m, Eq a, Ord a, Show a) =>
 	[(SimplificationF a m ctx, [Tree a -> Maybe (Tree a)])] ->
 	ctx ->
 	Tree a ->
 	m (Maybe (Tree a, Either (SimplifyPattern a) String, ctx))
 mixedApplyFirstSimplificationWithSimplify simplifications ctx t0 = loop simplifications t0
 	where
-	-- loop :: (PatternElement a) => [SimplificationF a m ctx] -> Tree a -> m (Maybe (Tree a, Either (SimplifyPattern a) String, ctx))
+	-- loop :: (Eq a, Ord a, Show a) => [SimplificationF a m ctx] -> Tree a -> m (Maybe (Tree a, Either (SimplifyPattern a) String, ctx))
 	loop cur t = case cur of
 		[] -> return Nothing
 		((simpl, condSimplifies) : xs) -> case simpl of
@@ -122,20 +122,20 @@ mixedApplyFirstSimplificationWithSimplify simplifications ctx t0 = loop simplifi
 			Middle3 (name, func) -> do
 				r <- monadicApplyTreeOne (monadicMatchAndReplace undefined (func condSimplifies ctx)) t
 				case r of
-					Just (newCtx, newt) -> return $ Just (newt, Right $ patternElemShow name, newCtx)
+					Just (newCtx, newt) -> return $ Just (newt, Right $ show name, newCtx)
 					Nothing -> loop xs t
 
 			Right3 (name, func) ->
 				let r = applyTreeOne (matchAndReplacePureF condSimplifies (name, func)) t
 				in case r of
-					Just newt -> return $ Just (newt, Right $ patternElemShow name, ctx)
+					Just newt -> return $ Just (newt, Right $ show name, ctx)
 					Nothing -> loop xs t
 
 -----------
 -- LOOPS --
 -----------
 
-applySimplificationsUntil0Debug :: (PatternElement a) => [SimplifyPattern a] -> Tree a -> [(Tree a, SimplifyPattern a)]
+applySimplificationsUntil0Debug :: (Eq a, Ord a, Show a) => [SimplifyPattern a] -> Tree a -> [(Tree a, SimplifyPattern a)]
 applySimplificationsUntil0Debug patterns t0 = loop t0
 	where
 	condSimplifies = makeCondSimplifies patterns
@@ -143,7 +143,7 @@ applySimplificationsUntil0Debug patterns t0 = loop t0
 		Nothing -> []
 		Just (newt, rule) -> (newt, rule) : loop newt
 
-mixedApplySimplificationsUntil0Debug :: (Monad m, PatternElement a) =>
+mixedApplySimplificationsUntil0Debug :: (Monad m, Eq a, Ord a, Show a) =>
 	Maybe Int ->
 	[SimplificationF a m ctx] ->
 	ctx ->
@@ -168,10 +168,10 @@ mixedApplySimplificationsUntil0Debug condRecLimit simplifications ctx0 t0 = loop
 -- where each element is a result of successively applied maybe-transformation
 -- It goes from left to right, bottom up. Looks like scanl on lists
 -- Ex: let f = someReverse, t = makeTree "(12 34) 56" in map snd (applyTryTree f t) -> [((21 34) 56), ((21 43) 56), ((43 21) 56), ((43 21) 65), (65 (43 21))"
-applyTryTree :: (PatternElement a) => (Tree a -> Maybe (Tree a)) -> Tree a -> [(Tree a, Tree a, Bool)]
+applyTryTree :: (Eq a, Ord a, Show a) => (Tree a -> Maybe (Tree a)) -> Tree a -> [(Tree a, Tree a, Bool)]
 applyTryTree = applyLoop id
 	where
-	applyLoop :: (PatternElement a) => (Tree a -> Tree a) -> (Tree a -> Maybe (Tree a)) -> Tree a -> [(Tree a, Tree a, Bool)]
+	applyLoop :: (Eq a, Ord a, Show a) => (Tree a -> Tree a) -> (Tree a -> Maybe (Tree a)) -> Tree a -> [(Tree a, Tree a, Bool)]
 	applyLoop parentReconstruction f t = case t of
 		Leaf s -> [new t] -- TODO: restrict to branches only for performance. So change this to "Leaf s -> []"
 		Branch xs -> loop [] xs
@@ -191,10 +191,10 @@ applyTryTree = applyLoop id
 			currentWholeT = parentReconstruction me
 			withNewt newt = (newt, parentReconstruction newt, True)
 
-matchAndReplacePureF :: (PatternElement a) => [Tree a -> Maybe (Tree a)] -> PureSimplificationF a -> (Tree a -> Maybe (Tree a))
+matchAndReplacePureF :: (Eq a, Ord a, Show a) => [Tree a -> Maybe (Tree a)] -> PureSimplificationF a -> (Tree a -> Maybe (Tree a))
 matchAndReplacePureF condSimplifies (name, func) = withFunctionNameCheck Nothing (name, func condSimplifies)
 
-applySimplifyPattern :: (PatternElement a) => ([Tree a -> Maybe (Tree a)], [Tree a -> Maybe (Tree a)]) -> [Tree a -> Maybe (Tree a)] -> SimplifyPattern a -> Tree a -> Maybe (Tree a)
+applySimplifyPattern :: (Eq a, Ord a, Show a) => ([Tree a -> Maybe (Tree a)], [Tree a -> Maybe (Tree a)]) -> [Tree a -> Maybe (Tree a)] -> SimplifyPattern a -> Tree a -> Maybe (Tree a)
 applySimplifyPattern (patternSimplifies, trySimplifies) condSimplifies pattern t = case pattern of
 	SimplifyPattern    match replace conds -> applyTreeOne (matchAndReplace condSimplifies match replace conds) t
 	EagerSimplifyPattern mtc replace conds -> applyTreeAll (matchAndReplace condSimplifies mtc   replace conds) t
@@ -202,7 +202,7 @@ applySimplifyPattern (patternSimplifies, trySimplifies) condSimplifies pattern t
 		where
 		decr = decreasingLists trySimplifies
 
-		-- patrec :: (PatternElement a) => (Tree a -> Maybe (Tree a)) -> RecList (Tree a -> Maybe (Tree a)) -> Tree a -> Maybe (Tree a)
+		-- patrec :: (Eq a, Ord a, Show a) => (Tree a -> Maybe (Tree a)) -> RecList (Tree a -> Maybe (Tree a)) -> Tree a -> Maybe (Tree a)
 		patrec simpl (RecF continuations) curT = listToMaybe $ catMaybes $ concat $ continued
 			where
 			trees3                        = applyTryTree simpl curT
@@ -211,12 +211,12 @@ applySimplifyPattern (patternSimplifies, trySimplifies) condSimplifies pattern t
 			treef          t              = map ($ t) patternSimplifies ++ map (contf t) continuations -- TODO: optimize diz
 			contf          t (cont, rest) = patrec cont rest t
 
-			-- continued      :: (PatternElement a) => [[Maybe (Tree a)]]
-			-- contf          :: (PatternElement a) => Tree a -> (Tree a -> Maybe (Tree a), RecList (Tree a -> Maybe (Tree a))) -> Maybe (Tree a)
-			-- differentTrees :: (PatternElement a) => [Tree a]
-			-- trees3         :: (PatternElement a) => [(Tree a, Tree a, Bool)]
+			-- continued      :: (Eq a, Ord a, Show a) => [[Maybe (Tree a)]]
+			-- contf          :: (Eq a, Ord a, Show a) => Tree a -> (Tree a -> Maybe (Tree a), RecList (Tree a -> Maybe (Tree a))) -> Maybe (Tree a)
+			-- differentTrees :: (Eq a, Ord a, Show a) => [Tree a]
+			-- trees3         :: (Eq a, Ord a, Show a) => [(Tree a, Tree a, Bool)]
 
-withFunctionNameCheck :: (PatternElement a) => b -> (a, Tree a -> b) -> (Tree a -> b)
+withFunctionNameCheck :: (Eq a, Ord a, Show a) => b -> (a, Tree a -> b) -> (Tree a -> b)
 withFunctionNameCheck defaul (nameLeaf, func) tree = case tree of -- NOTE: in condSimplifies function we always check the name!
 	(Leaf s) ->
 		if s == nameLeaf
@@ -232,7 +232,7 @@ withFunctionNameCheck defaul (nameLeaf, func) tree = case tree of -- NOTE: in co
 	(_) -> defaul
 
 -- | Filter condSimplifies that are pure, then apply condSimplifies to them to produce literally pure functions
-makeTrySimplifiesFromMixed :: (PatternElement a) => [(SimplificationF a m ctx, [Tree a -> Maybe (Tree a)])] -> ([Tree a -> Maybe (Tree a)], [Tree a -> Maybe (Tree a)])
+makeTrySimplifiesFromMixed :: (Eq a, Ord a, Show a) => [(SimplificationF a m ctx, [Tree a -> Maybe (Tree a)])] -> ([Tree a -> Maybe (Tree a)], [Tree a -> Maybe (Tree a)])
 makeTrySimplifiesFromMixed all = partitionEithers $ loop all
 	where
 	loop [] = []
@@ -242,10 +242,10 @@ makeTrySimplifiesFromMixed all = partitionEithers $ loop all
 		Right3 s -> (Left $ matchAndReplacePureF condSimplifies s) : loop fs
 
 -- | Take patterns and apply condSimplifies to them to produce pair of (regular patterns, try-fail patterns)
-makeTrySimplifies :: (PatternElement a) => [Tree a -> Maybe (Tree a)] -> [SimplifyPattern a] -> ([Tree a -> Maybe (Tree a)], [Tree a -> Maybe (Tree a)])
+makeTrySimplifies :: (Eq a, Ord a, Show a) => [Tree a -> Maybe (Tree a)] -> [SimplifyPattern a] -> ([Tree a -> Maybe (Tree a)], [Tree a -> Maybe (Tree a)])
 makeTrySimplifies condSimplifies all = partitionEithers $ map (makeTrySimplify condSimplifies) all
 
-makeTrySimplify :: (PatternElement a) => [Tree a -> Maybe (Tree a)] -> SimplifyPattern a -> Either (Tree a -> Maybe (Tree a)) (Tree a -> Maybe (Tree a))
+makeTrySimplify :: (Eq a, Ord a, Show a) => [Tree a -> Maybe (Tree a)] -> SimplifyPattern a -> Either (Tree a -> Maybe (Tree a)) (Tree a -> Maybe (Tree a))
 makeTrySimplify condSimplifies pattern = case pattern of
 	SimplifyPattern    match replace conds -> Left  $ matchAndReplace condSimplifies match replace conds
 	TrySimplifyPattern match replace conds -> Right $ matchAndReplace condSimplifies match replace conds
@@ -255,22 +255,22 @@ makeTrySimplify condSimplifies pattern = case pattern of
 -- This method has 2 features:
 --  * accepts optional "limit" value which makes it so that conditionals can be nested "limit" of times only
 --  * returned simplifications don't contain patterns that match their own conditionals. Ex: "True -> False | True" will not result in infinite recursion caused by conditionals simplifications. NOTE: unbound recursion can still be achieved if there is cyclic Conditional dependencies, ex: "1) p0 x -> 0 | p1 a ; 2) p1 x -> 1 | p0 x", but this is preventible by limit
-makeCondSimplifiesFromMixed :: (Monad m, PatternElement a) => Maybe Int -> [SimplificationF a m ctx] -> [(SimplificationF a m ctx, [Tree a -> Maybe (Tree a)])]
+makeCondSimplifiesFromMixed :: (Monad m, Eq a, Ord a, Show a) => Maybe Int -> [SimplificationF a m ctx] -> [(SimplificationF a m ctx, [Tree a -> Maybe (Tree a)])]
 makeCondSimplifiesFromMixed condRecLimit simplifications = maybe (mapwithcur unlimited) (\ l -> map (\ s -> (s, limited s l 0)) simplifications) condRecLimit
 	where
-	-- mapwithcur :: (PatternElement a) => (SimplificationF a m ctx -> [Tree a -> Maybe (Tree a)]) -> [(SimplificationF a m ctx, [Tree a -> Maybe (Tree a)])]
+	-- mapwithcur :: (Eq a, Ord a, Show a) => (SimplificationF a m ctx -> [Tree a -> Maybe (Tree a)]) -> [(SimplificationF a m ctx, [Tree a -> Maybe (Tree a)])]
 	mapwithcur f = map (\ s -> (s, f s)) simplifications
 
-	-- limited :: (PatternElement a) => SimplificationF a m ctx -> Int -> Int -> [Tree a -> Maybe (Tree a)]
+	-- limited :: (Eq a, Ord a, Show a) => SimplificationF a m ctx -> Int -> Int -> [Tree a -> Maybe (Tree a)]
 	limited current limit = let f n = if n >= limit then [] else withrec current (f (n + 1)) in f
 
-	-- unlimited :: (PatternElement a) => SimplificationF a m ctx -> [Tree a -> Maybe (Tree a)]
+	-- unlimited :: (Eq a, Ord a, Show a) => SimplificationF a m ctx -> [Tree a -> Maybe (Tree a)]
 	unlimited current = let f = withrec current f in f
 
-	-- withrec :: (PatternElement a) => SimplificationF a m ctx -> [Tree a -> Maybe (Tree a)] -> [Tree a -> Maybe (Tree a)]
+	-- withrec :: (Eq a, Ord a, Show a) => SimplificationF a m ctx -> [Tree a -> Maybe (Tree a)] -> [Tree a -> Maybe (Tree a)]
 	withrec current firstAggregated = collectSimplify simplifications
 		where
-		-- applyPattern :: (PatternElement a) => SimplifyPattern a -> (Tree a -> Maybe (Tree a))
+		-- applyPattern :: (Eq a, Ord a, Show a) => SimplifyPattern a -> (Tree a -> Maybe (Tree a))
 		applyPattern pattern =
 			if anymatched -- If any conditional gets matched by the match part of pattern, reduction usually results in infinite recursion, so skip that pattern
 			then const Nothing
@@ -280,17 +280,17 @@ makeCondSimplifiesFromMixed condRecLimit simplifications = maybe (mapwithcur unl
 				SimplifyPattern match replace conds -> (match, replace, conds)
 				TrySimplifyPattern match replace conds -> (match, replace, conds)
 				EagerSimplifyPattern mtc replace conds -> (mtc,   replace, conds)
-			condTrees = foldl (\ acc (left, s, right) -> left : right : acc) [] $ map conditionalToTrees conds
+			condTrees = foldl (\ acc (left, right) -> left : right : acc) [] $ map conditionalToTrees conds
 			anymatched = any isJust $ map (matchGetDict match) condTrees
 
-		-- collectSimplify :: (PatternElement a) => [SimplificationF a m ctx] -> [(Tree a -> Maybe (Tree a))]
+		-- collectSimplify :: (Eq a, Ord a, Show a) => [SimplificationF a m ctx] -> [(Tree a -> Maybe (Tree a))]
 		collectSimplify [] = []
 		collectSimplify (f : fs) = case f of
 			Left3 pattern -> (applyPattern pattern) : collectSimplify fs
 			Middle3 {} -> collectSimplify fs
 			Right3 (name, func) -> (withFunctionNameCheck Nothing (name, func firstAggregated)) : collectSimplify fs
 
-makeCondSimplifies :: (PatternElement a) => [SimplifyPattern a] -> [Tree a -> Maybe (Tree a)]
+makeCondSimplifies :: (Eq a, Ord a, Show a) => [SimplifyPattern a] -> [Tree a -> Maybe (Tree a)]
 makeCondSimplifies patterns = let f = map (simpleApply f) patterns in f
 	where
 	-- TODO: try things in conds (replace `matchAndReplace' by `applySimplifyPattern')

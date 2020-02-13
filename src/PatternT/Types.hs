@@ -3,23 +3,14 @@ module PatternT.Types where
 
 type Symbol = String
 
-type QuoteInfo = Maybe (Char, Bool)       -- ^ Maybe (closing char, closedQ)
-
-data Expr
-	= Atom Symbol QuoteInfo
-	| Group [Expr]
-	deriving (Eq, Show, Read)
-
 data Tree a
 	= Leaf a
 	| Branch [Tree a]
 
-data ParseError
-	= MissingOpenBracket    [Token]          -- ^ [Token] are tokens up to (not including) a bad TokenCloseBracket
-	| MissingCloseBracket
-	| MissingEndQuote       [Token] Token    -- ^ [Token] are tokens up to (not including) a bad TokenWord (Token)
-	| ParsedEmptyBrackets   [Token]          -- ^ [Token] are tokens up to (not including) a bad ()
-	deriving (Eq, Show, Read)
+data SimplifyPattern a
+	= SimplifyPattern (PatternMatchPart a) (PatternReplacePart a) [Conditional a]
+	| TrySimplifyPattern (PatternMatchPart a) (PatternReplacePart a) [Conditional a]
+	| EagerSimplifyPattern (PatternMatchPart a) (PatternReplacePart a) [Conditional a]
 
 data PatternMatchPart a
 	= Variable a
@@ -38,37 +29,10 @@ data Conditional a
 	| LTCond (PatternReplacePart a) (PatternReplacePart a)
 	| LECond (PatternReplacePart a) (PatternReplacePart a)
 
-data SimplifyPattern a
-	= SimplifyPattern (PatternMatchPart a) (PatternReplacePart a) [Conditional a]
-	| TrySimplifyPattern (PatternMatchPart a) (PatternReplacePart a) [Conditional a]
-	| EagerSimplifyPattern (PatternMatchPart a) (PatternReplacePart a) [Conditional a]
-
-data ParseMatchError
-	= ParseMatchErrorEmptyExprs
-	| ParseMatchErrorTryGotNoBody
-	| ParseMatchErrorEagerGotNoBody
-	| ParseMatchErrorNoReplacePart
-	| SplitFailed
-	| ExpectedClosingBracket String
-	| MatchEmptyTreeError
-	| TokenizeError ParseError
-	deriving (Eq, Show, Read)
-
 data Either3 a b c
 	= Left3 a
 	| Middle3 b
 	| Right3 c
-
-data DelimiterOpts
-	= DelimiterIgnoreQuotes
-	| DelimiterRespectQuotes
-	deriving (Eq, Show, Read)
-
-data Token
-	= TokenWord String QuoteInfo
-	| TokenOpenBracket
-	| TokenCloseBracket
-	deriving (Eq, Show, Read)
 
 data ParseOptions = ParseOptions
 	{ fixMissingBrackets      :: Bool        -- ^ Treat "a b ) c )) d" as "(((a b) c)) d" and "(((( a b ) c ) d" as "(((( a b ) c ) d))". If false, returns Missing*Bracket
@@ -78,10 +42,6 @@ data ParseOptions = ParseOptions
 
 data RecF t x = RecF (t (x, RecF t x))
 type RecList x = RecF [] x
-
-class (Eq a, Ord a) => PatternElement a where
-	patternElemShow :: a -> String
-	patternElemRead :: String -> QuoteInfo -> a
 
 instance (Eq a) => Eq (Tree a) where
 	a == b = case a of

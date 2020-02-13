@@ -8,7 +8,7 @@ import PatternT.Dict
 
 type BindingDict a = Dict a [Tree a]
 
-checkCond :: (PatternElement a) => [Tree a -> Maybe (Tree a)] -> BindingDict a -> Conditional a -> Bool
+checkCond :: (Eq a, Ord a) => [Tree a -> Maybe (Tree a)] -> BindingDict a -> Conditional a -> Bool
 checkCond simplifies dict cond = case cond of
 	(EqCond left right) ->
 		simplify (replaceWithDict dict left)
@@ -27,7 +27,7 @@ checkCond simplifies dict cond = case cond of
 			<= replaceWithDict dict right
 	where simplify t = maybe t id (listToMaybe $ catMaybes $ map ($ t) simplifies) -- apply first simplify function, not recursive NOTE: can match a recursive builtin
 
-matchAndReplace :: (PatternElement a) => [Tree a -> Maybe (Tree a)] -> PatternMatchPart a -> PatternReplacePart a -> [Conditional a] -> Tree a -> Maybe (Tree a)
+matchAndReplace :: (Eq a, Ord a) => [Tree a -> Maybe (Tree a)] -> PatternMatchPart a -> PatternReplacePart a -> [Conditional a] -> Tree a -> Maybe (Tree a)
 matchAndReplace simplifies match replace conds t =
 	case matchGetDict match t of
 		Nothing -> Nothing
@@ -36,7 +36,7 @@ matchAndReplace simplifies match replace conds t =
 			then Just (replaceWithDict dict replace)
 			else Nothing
 
-replaceWithDict :: (PatternElement a) => BindingDict a -> PatternReplacePart a -> Tree a
+replaceWithDict :: (Eq a, Ord a) => BindingDict a -> PatternReplacePart a -> Tree a
 replaceWithDict dict replace = case replace of
 	(RVar token) ->
 		case dictGet dict token of
@@ -60,10 +60,10 @@ replaceWithDict dict replace = case replace of
 						Nothing -> (Leaf token) : loop rs
 				(RGroup childs) -> replaceRgroup childs : loop rs
 
-matchGetDict :: (PatternElement a) => PatternMatchPart a -> Tree a -> Maybe (BindingDict a)
+matchGetDict :: (Eq a, Ord a) => PatternMatchPart a -> Tree a -> Maybe (BindingDict a)
 matchGetDict match t = matchWithDict emptyDict match t
 
-matchWithDict :: (PatternElement a) => BindingDict a -> PatternMatchPart a -> Tree a -> Maybe (BindingDict a)
+matchWithDict :: (Eq a, Ord a) => BindingDict a -> PatternMatchPart a -> Tree a -> Maybe (BindingDict a)
 matchWithDict dict match t =
 	case match of
 		(Variable bindName) ->
@@ -88,7 +88,7 @@ matchWithDict dict match t =
 				(Leaf x) ->
 					Nothing
 
-matchVariable :: (PatternElement a) => BindingDict a -> a -> Tree a -> Maybe (BindingDict a)
+matchVariable :: (Eq a, Ord a) => BindingDict a -> a -> Tree a -> Maybe (BindingDict a)
 matchVariable dict bindName t =
 	case dictGet dict bindName of
 		Just [value] ->
@@ -98,7 +98,7 @@ matchVariable dict bindName t =
 		(_) ->
 			Just (dictAdd dict bindName [t])
 
-matchGroups :: (PatternElement a) => BindingDict a -> [PatternMatchPart a] -> [Tree a] -> Maybe (BindingDict a)
+matchGroups :: (Eq a, Ord a) => BindingDict a -> [PatternMatchPart a] -> [Tree a] -> Maybe (BindingDict a)
 matchGroups dict [] [] = Just dict
 matchGroups dict [] ts = Nothing -- Size should be equal
 matchGroups dict ps [] = Nothing -- Size should be equal
@@ -148,7 +148,7 @@ matchGroups dict (p : ps) (t : ts) = case p of
 					(Variable bindName) -> if foundQ then [] else Left bindName : loop False xs
 					(_) -> if foundQ then [] else loop False xs
 
-		varadicUntilExact :: (PatternElement a) => [PatternMatchPart a] -> [Tree a] -> [Tree a] -> ([Tree a], [Tree a])
+		varadicUntilExact :: (Eq a, Ord a) => [PatternMatchPart a] -> [Tree a] -> [Tree a] -> ([Tree a], [Tree a])
 		varadicUntilExact matches buf trees =
 			case trees of
 				[] -> break
@@ -157,7 +157,7 @@ matchGroups dict (p : ps) (t : ts) = case p of
 					else varadicUntilExact matches (t : buf) ts
 			where break = (reverse buf, trees)
 
-		matchSome :: (PatternElement a) => [Tree a] -> [PatternMatchPart a] -> Bool
+		matchSome :: (Eq a, Ord a) => [Tree a] -> [PatternMatchPart a] -> Bool
 		matchSome trees patterns = case patterns of
 			[] -> True
 			(p : ps) -> case trees of
@@ -171,7 +171,7 @@ matchGroups dict (p : ps) (t : ts) = case p of
 ------------------
 
 -- | Top-down apply first
-applyTreeOne :: (PatternElement a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Maybe (Tree a)
+applyTreeOne :: (Eq a, Ord a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Maybe (Tree a)
 applyTreeOne func t = case t of
 	(Leaf s) -> func t
 	(Branch oldchilds) -> let new = func t in case new of
@@ -190,7 +190,7 @@ applyTreeOne func t = case t of
 			Nothing -> loop (previus ++ [c]) cs
 
 -- | Bottom-up apply first
-applyTreeOneBU :: (PatternElement a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Maybe (Tree a)
+applyTreeOneBU :: (Eq a, Ord a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Maybe (Tree a)
 applyTreeOneBU func t = case t of
 	(Leaf s) -> func t
 	(Branch childs) ->
@@ -198,7 +198,7 @@ applyTreeOneBU func t = case t of
 				Just newme -> Just newme
 				Nothing -> func t
 		where
-		-- loop :: (PatternElement a) => [Tree a] -> [Tree a] -> Maybe (Tree a)
+		-- loop :: (Eq a, Ord a) => [Tree a] -> [Tree a] -> Maybe (Tree a)
 		loop previus [] = Nothing
 		loop previus (c : cs) = case applyTreeOne func c of
 			Just newc -> Just $
@@ -209,7 +209,7 @@ applyTreeOneBU func t = case t of
 			Nothing -> loop (previus ++ [c]) cs
 
 -- | Top-down apply all
-applyTreeAll :: (PatternElement a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Maybe (Tree a)
+applyTreeAll :: (Eq a, Ord a) => (Tree a -> Maybe (Tree a)) -> Tree a -> Maybe (Tree a)
 applyTreeAll func t = case t of
 	(Leaf s) -> func t
 	(Branch oldchilds) -> case func t of
@@ -224,7 +224,7 @@ applyTreeAll func t = case t of
 		where
 		getChilds = loop False []
 
-		-- loop :: (PatternElement a) => Bool -> [Tree a] -> [Tree a] -> Maybe (Tree a)
+		-- loop :: (Eq a, Ord a) => Bool -> [Tree a] -> [Tree a] -> Maybe (Tree a)
 		loop changed previus [] = if changed then Just (reverse previus) else Nothing
 		loop changed previus (c : cs) = case applyTreeAll func c of
 			Just newc -> case newc of
@@ -233,7 +233,7 @@ applyTreeAll func t = case t of
 				(_) -> loop True (newc : previus) cs
 			Nothing -> loop changed (c : previus) cs
 
-monadicApplyTreeOne :: (PatternElement a) => (Monad m) =>
+monadicApplyTreeOne :: (Eq a, Ord a) => (Monad m) =>
 	(Tree a -> m (Maybe (ctx, Tree a))) ->
 	Tree a ->
 	m (Maybe (ctx, Tree a))
@@ -245,7 +245,7 @@ monadicApplyTreeOne func t = case t of
 			Just x -> return $ Just x
 			Nothing -> func t
 		where
-		-- loop :: (PatternElement a) => (Monad m) => [Tree a] -> [Tree a] -> m (Maybe (ctx, Tree a)) -- TODO: make this type to work \=
+		-- loop :: (Eq a, Ord a) => (Monad m) => [Tree a] -> [Tree a] -> m (Maybe (ctx, Tree a)) -- TODO: make this type to work \=
 		loop previus [] = return Nothing
 		loop previus (c : cs) = do
 			r <- monadicApplyTreeOne func c
